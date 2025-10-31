@@ -1,0 +1,9 @@
+class Main {
+	record SomeRecordWithLongLongLongLongLongLongLongLongLongLongLongLongLongName(int a) {
+	};
+	void veryLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongMethod(SomeRecordWithLongLongLongLongLongLongLongLongLongLongLongLongLongName a) {
+	}
+	public static void main() {
+		System.out.println("Hello");
+	}
+}
