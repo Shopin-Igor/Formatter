@@ -1,0 +1,19 @@
+[project]
+name = "formatter-tests"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pytest>=8.0.0",
+  "pyyaml>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/test/python"]
+pythonpath = ["src/test/python"]
+addopts = "-q"
+
+
+
+#uv init formatter-tests
+#cd formatter-tests
+#uv add pyyaml pytest
