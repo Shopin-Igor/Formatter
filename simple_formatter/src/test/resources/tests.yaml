@@ -1,0 +1,111 @@
+cases:
+  - name: case1
+    input: |
+      class Main {int a;}
+    expected: |
+      class Main {
+      	int a;
+      }
+
+  - name: case2
+    input: |
+      class Main {record A(int x) {};}
+    expected: |
+      class Main {
+      	record A(int x) {
+      	};
+      }
+
+  - name: case3
+    input: |
+      class Main {void f() {System.out.println(1);}}
+    expected: |
+      class Main {
+      	void f() {
+      		System.out.println(1);
+      	}
+      }
+
+  - name: case4
+    input: |
+      class Main {public static void main() {System.out.println("Hello");}}
+    expected: |
+      class Main {
+      	public static void main() {
+      		System.out.println("Hello");
+      	}
+      }
+
+  - name: case5
+    input: |
+      class Main {record A(int x) {}; void g() {};}
+    expected: |
+      class Main {
+      	record A(int x) {
+      	};
+      	void g() {
+      	};
+      }
+
+  - name: case6
+    input: |
+      class Main {if (true) {System.out.println(1);} System.out.println(2);}
+    expected: |
+      class Main {
+      	if (true) {
+      		System.out.println(1);
+      	}
+      	System.out.println(2);
+      }
+
+  - name: case7
+    input: |
+      class Main {void a(){if (true){if (false){}}}}
+    expected: |
+      class Main {
+      	void a() {
+      		if (true) {
+      			if (false) {
+      			}
+      		}
+      	}
+      }
+
+  - name: case8
+    input: |
+      class Main {record A(int x) {};void f(){System.out.println(1);}}
+    expected: |
+      class Main {
+      	record A(int x) {
+      	};
+      	void f() {
+      		System.out.println(1);
+      	}
+      }
+
+  - name: case9
+    input: |
+      class Main {void f() {System.out.println(1);}void g(){System.out.println(2);}}
+    expected: |
+      class Main {
+      	void f() {
+      		System.out.println(1);
+      	}
+      	void g() {
+      		System.out.println(2);
+      	}
+      }
+
+  - name: case10
+    input: |
+      class Main {void f(){System.out.println(new Object(){public String toString(){return "x";}});}}
+    expected: |
+      class Main {
+      	void f() {
+      		System.out.println(new Object() {
+      			public String toString() {
+      				return "x";
+      			}
+      		});
+      	}
+      }
