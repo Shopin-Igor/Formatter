@@ -21,6 +21,7 @@ dependencies {
 
     implementation("com.github.javaparser:javaparser-core:3.27.1")
 
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
 
