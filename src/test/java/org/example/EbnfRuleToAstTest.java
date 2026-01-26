@@ -58,9 +58,6 @@ public class EbnfRuleToAstTest {
                 )
                 """);
 
-        System.out.println("EXPECTED:\n" + expected.replace(" ", "·"));
-        System.out.println("ACTUAL:\n" + actual.replace(" ", "·"));
-
         assertEquals(expected, actual);
     }
 
