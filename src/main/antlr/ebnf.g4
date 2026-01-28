@@ -1,181 +1,165 @@
-/*
- [The "BSD licence"]
- Copyright (c) 2013 Tom Everett
- All rights reserved.
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions
- are met:
- 1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
- 2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
- 3. The name of the author may not be used to endorse or promote products
-    derived from this software without specific prior written permission.
-
- THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 // $antlr-format alignTrailingComments true, columnLimit 150, minEmptyLines 1, maxEmptyLinesToKeep 1, reflowComments false, useTab false
 // $antlr-format allowShortRulesOnASingleLine false, allowShortBlocksOnASingleLine true, alignSemicolons hanging, alignColons hanging
 
 grammar ebnf;
 
+// -------------------------------------------------------------------
+// Rule file structure
+// -------------------------------------------------------------------
+
 rulelist
-    : statement* EOF
+    : rule_* EOF
     ;
 
+// <RuleName> ::= <pattern> ;
 rule_
-    : lhs EBNF_ASSIGN rhs
+    : ruleName EBNF_ASSIGN pattern SEMI
     ;
 
-lhs
-    : id_
+// Rule name is in angle brackets: <ifStmt>
+ruleName
+    : LT IDENT GT
     ;
 
-rhs
-    : alternatives
+// -------------------------------------------------------------------
+// Pattern language (matches JavaParser AST nodes, not Java tokens)
+// -------------------------------------------------------------------
+
+// Alternation: A | B | C
+pattern
+    : alternative (PIPE alternative)*
     ;
 
-alternatives
-    : alternative ('|' alternative)*
-    ;
-
+// Sequence of atoms (space-separated). Useful for matching NodeList patterns etc.
 alternative
-    : element*
+    : sequence?
     ;
 
-element
-    : optional_
-    | zeroormore
-    | oneormore
-    | text_
-    | id_
+sequence
+    : atom+
     ;
 
-optional_
-    : '[' alternatives ']'
-    ;
-
-zeroormore
-    : '{' alternatives '}'
-    ;
-
-oneormore
-    : '(' alternatives ')'
-    ;
-
-text_
-    : ID
-    ;
-
-id_
-    : '<' ruleid '>'
-    ;
-
-ruleid
-    : ID
-    ;
-
-if_stmt
-    : IF LPAREN expr RPAREN
-      lbrace=LBRACE statement* rbrace=RBRACE
-      (ELSE elseLbrace=LBRACE statement* elseRbrace=RBRACE)?
-    ;
-
-statement
-    : if_stmt
-    | assignment
-    ;
-
-expr
-    : logicalOrExpr
-    ;
-
-logicalOrExpr
-    : logicalAndExpr ('||' logicalAndExpr)*
-    ;
-
-logicalAndExpr
-    : equalityExpr ('&&' equalityExpr)*
-    ;
-
-equalityExpr
-    : relationalExpr (('==' | '!=') relationalExpr)*
-    ;
-
-relationalExpr
-    : additiveExpr (('>' | '<' | '>=' | '<=') additiveExpr)*
-    ;
-
-additiveExpr
-    : multiplicativeExpr (('+' | '-') multiplicativeExpr)*
-    ;
-
-multiplicativeExpr
-    : atom (('*' | '/') atom)*
-    ;
-
+// Postfix quantifiers: ?, *, +
 atom
-    : LPAREN expr RPAREN
-    | ID
+    : primary quantifier?
+    ;
+
+quantifier
+    : QMARK
+    | STAR
+    | PLUS
+    ;
+
+// Primaries
+primary
+    : nodePattern
+    | ruleRef
+    | listPattern
+    | group
+    | literal
+    ;
+
+// Reference to another rule: <expr>
+ruleRef
+    : LT IDENT GT
+    ;
+
+// Grouping: ( ... )
+group
+    : LPAREN pattern RPAREN
+    ;
+
+// List: [ a, b, c ]
+// Can combine with quantifiers on contained items: [ <stmt>* ]
+listPattern
+    : LBRACK (pattern (COMMA pattern)*)? RBRACK
+    ;
+
+// Node pattern: IfStmt(...) or just IfStmt
+// TypeName should match JavaParser node simple class names: IfStmt, BlockStmt, BinaryExpr, NameExpr...
+nodePattern
+    : typeName (LPAREN fieldAssignments? RPAREN)?
+    ;
+
+typeName
+    : IDENT
+    ;
+
+// Fields: condition = <expr>, elseStmt? = BlockStmt(...)
+// Optional field match is written as: fieldName? = pattern
+fieldAssignments
+    : fieldAssignment (COMMA fieldAssignment)*
+    ;
+
+fieldAssignment
+    : fieldName QMARK? EQ pattern
+    ;
+
+fieldName
+    : IDENT
+    ;
+
+// Literals: for matching simple properties (operator, names, booleans, null)
+literal
+    : STRING
     | NUMBER
     | TRUE
     | FALSE
+    | NULL
+    | IDENT
     ;
 
+// -------------------------------------------------------------------
+// Lexer
+// -------------------------------------------------------------------
 
+EBNF_ASSIGN : '::=';
 
-Vertical_Line
-    : '|'
+SEMI  : ';';
+COMMA : ',';
+EQ    : '=';
+
+PIPE  : '|';
+
+QMARK : '?';
+STAR  : '*';
+PLUS  : '+';
+
+LPAREN : '(';
+RPAREN : ')';
+
+LBRACK : '[';
+RBRACK : ']';
+
+LT : '<';
+GT : '>';
+
+TRUE : 'true';
+FALSE: 'false';
+NULL : 'null';
+
+// IDENT supports underscores
+IDENT
+    : [a-zA-Z_] [a-zA-Z0-9_]*
     ;
 
-Greater_Than_Sign
-    : '>'
-    ;
-
-Less_Than_Sign
-    : '<'
-    ;
-
-IF    : 'if';
-ELSE  : 'else';
-TRUE  : 'true';
-FALSE : 'false';
-
-ID
-    : ('a' ..'z' | 'A' ..'Z') ('a' ..'z' | 'A' ..'Z' | '0' ..'9' | '-' )*
+// "string"
+STRING
+    : '"' ( '\\' . | ~["\\] )* '"'
     ;
 
 NUMBER
-    : [0-9]+
+    : [0-9]+ ('.' [0-9]+)?
     ;
 
 WS
-    : [ \r\n\t] -> skip
+    : [ \t\r\n]+ -> skip
     ;
 
-assignment
-    : ID JAVA_ASSIGN expr SEMI
+LINE_COMMENT
+    : '//' ~[\r\n]* -> skip
     ;
 
-
-EBNF_ASSIGN : '::=';
-JAVA_ASSIGN : '=';
-SEMI   : ';';
-LPAREN : '(';
-RPAREN : ')';
-LBRACE : '{';
-RBRACE : '}';
-LBRACK : '[';
-RBRACK : ']';
+BLOCK_COMMENT
+    : '/*' .*? '*/' -> skip
+    ;
