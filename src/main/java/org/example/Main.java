@@ -35,18 +35,26 @@ public class Main {
 
         CompilationUnit cu = parseResult.getResult().orElseThrow();
 
-        String rule = "SELECT IfStmt Where IfStmt.thenStmt != BlockStmt";
-        String[] ruleSplitToWords = rule.split(" +");
+        String rule = "SELECT IfStmt WHERE IfStmt.thenStmt != BlockStmt";
 
-        switch (ruleSplitToWords[0] + " " + ruleSplitToWords[2]) {
-            case "SELECT Where":
-                ///
+        String[] ruleSplitToWords = rule.split(" +");
+        if (ruleSplitToWords.length != 6) {
+            IO.println("rule must match the fomat: SELECT NodeType WHERE NodeType.Child operator(== or !=) NodeType");
+
+        }
+
+        switch (ruleSplitToWords[0] + " " + ruleSplitToWords[2] + " " + ruleSplitToWords.length) {
+            case "SELECT WHERE 6":
+
 
                 String[] thirdWordInRequest = ruleSplitToWords[3].split("\\.");
+
+
                 if (Objects.equals(ruleSplitToWords[1], thirdWordInRequest[0]) && thirdWordInRequest.length > 1) {
                     switch (ruleSplitToWords[1]) {
                         case "IfStmt":
 
+                            Statement getIfStmtChild = null; // для будущего
                             switch (thirdWordInRequest[1]) {
                                 case "thenStmt":
 
@@ -73,23 +81,27 @@ public class Main {
 
 
                                     break;
+                                case "elseEtmt":
+                                    //TODO
                                 default:
                                     IO.println("1st or 3rd word in request is not correct");
+                                    return;
                             }
 
 
                             break;
                         default:
-                            IO.println("1st or 3rd word in request is not correct");
+                            IO.println("rule must match the format: SELECT IfStmt WHERE NodeType.Child operator(== or !=) NodeType");
+                            return;
                     }
                 } else {
-                    IO.println("2nd word in request is not correct");
+                    IO.println("rule must match the format: SELECT NodeType WHERE NodeType.Child operator(== or !=) NodeType");
                 }
 
-                ///
+
                 break;
             default:
-                IO.println("1st or 3rd word in request is not correct");
+                IO.println("rule must match the format: SELECT NodeType WHERE NodeType.Child operator(== or !=) NodeType");
         }
     }
 }
