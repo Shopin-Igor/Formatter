@@ -37,7 +37,7 @@ public class RequestWithAndAtBlockWhereTest {
     // dslWithAND (AND)
     @Test
     void selectIfStmtWithAndSuccessful() {
-        String dsl = "SELECT IfStmt WHERE IfStmt.thenStmt == BlockStmt AND IfStmt.thenStmt == BlockStmt";
+        String dsl = "SELECT IfStmt WHERE IfStmt.thenStmt == BlockStmt AND IfStmt.thenStmt != (NOT BlockStmt)";
 
         String javaCode = """
                 public class AST {
