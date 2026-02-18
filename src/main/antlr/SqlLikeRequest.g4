@@ -3,15 +3,44 @@ grammar SqlLikeRequest;
 // правила  Parserа
 
 query
-    : selectStmt EOF
+    : formatStmt EOF
     ;
+
+formatStmt
+    : selectStmt (FORMAT ifStatement)?
+    ;
+
+// replace
+//    : ID AS REPLACEMENT
+//    ;
 
 selectStmt
     : SELECT selectTarget (WHERE expr)?
     ;
 
+ifStatement
+    : IF expr blockAssign (ELSE blockAssign)?
+    ;
+
+//blockStmt
+//    : LBRACE (expr)* RBRACE
+//    ;
+
+blockAssign
+    : LBRACE assignStmt* RBRACE
+    ;
+
+assignStmt
+    : REPLACEMENT (DOT ID)* ASSIGN expr SEMI
+    | ID (DOT ID)*          ASSIGN expr SEMI
+    ;
+
 selectTarget
-    : qualifiedName
+    : typeName (AS REPLACEMENT)?
+    ;
+
+typeName
+    : ID
     ;
 
 expr
@@ -56,7 +85,7 @@ compOp
 
 // Имя с точками, например IfStmt.thenStmt и т д
 qualifiedName
-    : ID (DOT ID)*
+    : (ID | REPLACEMENT) (DOT ID)*
     ;
 
 literal
@@ -71,6 +100,10 @@ literal
 
 SELECT : [sS][eE][lL][eE][cC][tT];
 WHERE  : [wW][hH][eE][rR][eE];
+FORMAT : [fF][oO][rR][mM][aA][tT];
+IF     : [iI][fF];
+ELSE   : [eE][lL][sS][eE];
+AS     : [aA][sS];
 
 AND    : [aA][nN][dD];
 OR     : [oO][rR];
@@ -81,18 +114,26 @@ FALSE  : [fF][aA][lL][sS][eE];
 NULL   : [nN][uU][lL][lL];
 
 EQ     : '==';
+ASSIGN : '=' ;
 NEQ    : '!=';
 LTE    : '<=';
 GTE    : '>=';
 LT     : '<';
 GT     : '>';
+SEMI   : ';';
 
 DOT    : '.';
 LPAREN : '(';
 RPAREN : ')';
+LBRACE : '{' ;
+RBRACE : '}' ;
 
 ID
     : [a-zA-Z_][a-zA-Z0-9_]*
+    ;
+
+REPLACEMENT
+    : '$'[a-zA-Z_][a-zA-Z0-9_]*
     ;
 
 NUMBER
