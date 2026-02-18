@@ -32,7 +32,7 @@ public class EndToEndDslTest {
         var matches = runner.run(dsl, javaCode);
 
         assertThat(matches.size()).isEqualTo(2);
-        assertThat(matches.getFirst().code().contains("if (a == b)"));
+        assertThat(matches.getFirst().code().contains("if (a == b)")).isTrue();
     }
 
 
@@ -62,7 +62,7 @@ public class EndToEndDslTest {
         var matches = runner.run(dsl, javaCode);
 
         assertThat(matches.size()).isEqualTo(1);
-        assertThat(matches.getFirst().code().contains("if (a == 2)"));
+        assertThat(matches.getFirst().code().contains("if (a == 2)")).isTrue();
     }
 
 
