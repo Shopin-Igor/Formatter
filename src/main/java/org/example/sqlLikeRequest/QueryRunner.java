@@ -5,7 +5,7 @@ import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import org.antlr.v4.runtime.*;
 import org.example.SqlLikeRequestLexer;
-import org.example.SqlLikeRequestParser;
+import org.example.SqlLikeRequestParserParser;
 
 import java.util.List;
 
@@ -14,16 +14,17 @@ public final class QueryRunner {
     private final TypeRegistry types = new TypeRegistry();
 
     public List<Match> run(String dsl, String javaSource) {
-        SqlLikeRequestParser.QueryContext query = parseDsl(dsl);
+        SqlLikeRequestParserParser.QueryContext query = parseDsl(dsl);
         CompilationUnit cu = parseJava(javaSource);
         return new QueryExecutor(types).execute(query, cu);
     }
 
-    private SqlLikeRequestParser.QueryContext parseDsl(String dsl) {
+    private SqlLikeRequestParserParser.QueryContext parseDsl(String dsl) {
         CharStream input = CharStreams.fromString(dsl);
         SqlLikeRequestLexer lexer = new SqlLikeRequestLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
-        SqlLikeRequestParser parser = new SqlLikeRequestParser(tokens);
+
+        SqlLikeRequestParserParser parser = new SqlLikeRequestParserParser(tokens);
 
         parser.setErrorHandler(new BailErrorStrategy());
         return parser.query();
