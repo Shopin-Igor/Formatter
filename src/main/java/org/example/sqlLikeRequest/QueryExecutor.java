@@ -2,7 +2,8 @@ package org.example.sqlLikeRequest;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
-import org.example.SqlLikeRequestParser;
+import org.antlr.v4.runtime.tree.TerminalNode;
+import org.example.SqlLikeRequestParserParser;
 
 import java.util.List;
 
@@ -14,23 +15,32 @@ public final class QueryExecutor {
         this.typeRegistry = typeRegistry;
     }
 
-    public List<Match> execute(SqlLikeRequestParser.QueryContext queryTree, CompilationUnit cu) {
-        SqlLikeRequestParser.SelectStmtContext select = queryTree.selectStmt();
+    public List<Match> execute(SqlLikeRequestParserParser.QueryContext queryTree, CompilationUnit cu) {
+        SqlLikeRequestParserParser.FormatStmtContext request = queryTree.formatStmt();
+        SqlLikeRequestParserParser.SelectStmtContext selectPart = request.selectStmt();
 
-        String selectTypeName = select.selectTarget().getText();
+        String selectTypeName = selectPart.selectTarget().typeName().getText();
+
+        TerminalNode aliasNode = selectPart.selectTarget().REPLACEMENT();
+        String rootRef = (aliasNode != null) ? aliasNode.getText() : selectTypeName;
+
+
         Class<? extends Node> selectType = typeRegistry.resolve(selectTypeName);
-
         List<? extends Node> candidates = cu.findAll(selectType);
 
-        if (select.expr() == null) {
-            return candidates.stream().map(Match::from).toList();
-        }
 
-        ExprEvaluator evaluator = new ExprEvaluator(typeRegistry, selectTypeName);
+        ExprEvaluator evaluator = new ExprEvaluator(typeRegistry, rootRef);
+
+        boolean hasFormat = request.FORMAT() != null && request.formatString() != null;
+        OutputRenderer renderer = hasFormat ? new OutputRenderer(rootRef) : null;
 
         return candidates.stream()
-                .filter(n -> evaluator.eval(select.expr(), n))
-                .map(Match::from)
+                .filter(n -> selectPart.expr() == null || evaluator.eval(selectPart.expr(), n))
+                .map(n -> {
+                    if (!hasFormat) return Match.from(n);
+                    String formatted = renderer.render(request.formatString(), n);
+                    return Match.from(n, formatted);
+                })
                 .toList();
     }
 }

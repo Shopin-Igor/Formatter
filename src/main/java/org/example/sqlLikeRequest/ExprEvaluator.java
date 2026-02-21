@@ -1,7 +1,8 @@
 package org.example.sqlLikeRequest;
 
 import com.github.javaparser.ast.Node;
-import org.example.SqlLikeRequestParser;
+import com.github.javaparser.ast.stmt.IfStmt;
+import org.example.SqlLikeRequestParserParser;
 
 import java.lang.reflect.Method;
 import java.util.Optional;
@@ -9,18 +10,18 @@ import java.util.Optional;
 public final class ExprEvaluator {
 
     private final TypeRegistry types;
-    private final String selectTypeName;
+    private final String rootRef;
 
-    public ExprEvaluator(TypeRegistry types, String selectTypeName) {
+    public ExprEvaluator(TypeRegistry types, String rootRef) {
         this.types = types;
-        this.selectTypeName = selectTypeName;
+        this.rootRef = rootRef;
     }
 
-    public boolean eval(SqlLikeRequestParser.ExprContext expr, Node root) {
+    public boolean eval(SqlLikeRequestParserParser.ExprContext expr, Node root) {
         return evalOr(expr.orExpr(), root);
     }
 
-    private boolean evalOr(SqlLikeRequestParser.OrExprContext ctx, Node root) {
+    private boolean evalOr(SqlLikeRequestParserParser.OrExprContext ctx, Node root) {
         boolean acc = evalAnd(ctx.andExpr(0), root);
         for (int i = 1; i < ctx.andExpr().size(); i++) {
             acc = acc || evalAnd(ctx.andExpr(i), root);
@@ -28,7 +29,7 @@ public final class ExprEvaluator {
         return acc;
     }
 
-    private boolean evalAnd(SqlLikeRequestParser.AndExprContext ctx, Node root) {
+    private boolean evalAnd(SqlLikeRequestParserParser.AndExprContext ctx, Node root) {
         boolean acc = evalNot(ctx.notExpr(0), root);
         for (int i = 1; i < ctx.notExpr().size(); i++) {
             acc = acc && evalNot(ctx.notExpr(i), root);
@@ -36,12 +37,12 @@ public final class ExprEvaluator {
         return acc;
     }
 
-    private boolean evalNot(SqlLikeRequestParser.NotExprContext ctx, Node root) {
+    private boolean evalNot(SqlLikeRequestParserParser.NotExprContext ctx, Node root) {
         if (ctx.NOT() != null) return !evalNot(ctx.notExpr(), root);
         return evalComparison(ctx.comparisonExpr(), root);
     }
 
-    private boolean evalComparison(SqlLikeRequestParser.ComparisonExprContext ctx, Node root) {
+    private boolean evalComparison(SqlLikeRequestParserParser.ComparisonExprContext ctx, Node root) {
         Object left = evalPrimary(ctx.additiveExpr(0).primary(), root);
 
         if (ctx.compOp() == null) {
@@ -58,7 +59,7 @@ public final class ExprEvaluator {
         };
     }
 
-    private Object evalPrimary(SqlLikeRequestParser.PrimaryContext ctx, Node root) {
+    private Object evalPrimary(SqlLikeRequestParserParser.PrimaryContext ctx, Node root) {
         if (ctx.literal() != null) return evalLiteral(ctx.literal());
 
         if (ctx.qualifiedName() != null) {
@@ -69,7 +70,7 @@ public final class ExprEvaluator {
                 return new TypeMarker(text);
 
             // Иначе это доступ к полю: IfStmt.thenStmt
-            String prefix = selectTypeName + ".";
+            String prefix = rootRef + ".";
             if (!text.startsWith(prefix)) {
                 throw new IllegalArgumentException("QualifiedName must start with " + prefix + " but got: " + text);
             }
@@ -81,7 +82,7 @@ public final class ExprEvaluator {
         return eval(ctx.expr(), root);
     }
 
-    private Object evalLiteral(SqlLikeRequestParser.LiteralContext lit) {
+    private Object evalLiteral(SqlLikeRequestParserParser.LiteralContext lit) {
         if (lit.NULL() != null) return null;
         if (lit.TRUE() != null) return Boolean.TRUE;
         if (lit.FALSE() != null) return Boolean.FALSE;
@@ -142,6 +143,14 @@ public final class ExprEvaluator {
 
     private Object readOneProperty(Object obj, String prop) {
         if (obj == null) return null;
+
+        if (obj instanceof IfStmt) {
+            prop = switch (prop) {
+                case "thenStatement" -> "thenStmt";
+                case "elseStatement" -> "elseStmt";
+                default -> prop;
+            };
+        }
 
         String getter = "get" + Character.toUpperCase(prop.charAt(0)) + prop.substring(1);
 

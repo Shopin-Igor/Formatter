@@ -60,6 +60,6 @@ public class RequestWithAndAtBlockWhereTest {
         var matches = runner.run(dsl, javaCode);
 
         assertThat(matches.size()).isEqualTo(1);
-        assertThat(matches.getFirst().code().contains("if (a == 2)"));
+        assertThat(matches.getFirst().code().contains("if (a == 2)")).isTrue();
     }
 }
