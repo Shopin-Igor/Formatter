@@ -180,3 +180,90 @@ abstract class AST {
     public abstract int sum(Input input);
 }
 ```
+
+---
+## Конструкция ForStmt
+
+### Правило
+Правило для форматирования для элемента (ForStmt) AST дерева:
+```ebnf
+<ForStmt> ::=
+    "for" sp "(" <ForInit>? ";" sp <Condition>? ";" sp <ForUpdate>? ")" sp <ForBody>;
+
+<ForInit>   ::= 
+    <ExprList>;
+    
+<Condition> ::= 
+    <Expr>;                         // bool Expr
+
+<ForUpdate> ::= 
+    <ExprList>;
+
+<ExprList>  
+    ::= <Expr> ( "," sp <Expr> )*;
+
+<ForBody> ::= 
+    <Block> | ( nl indent <Stmt> dedent );
+```
+
+### Пример 1
+Java исходник 1
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0;i<5;++i){sm += i;}
+    }
+}
+```
+Java исходник 2
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0; i<5; ++i) {
+            sm += i;
+        }
+    }
+}
+```
+
+### Пример 2
+Java исходник 3
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0;i<5;++i)sm += i;
+    }
+}
+```
+Java исходник 4
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0; i<5; ++i)
+            sm += i;
+    }
+}
+```
+
+### Пример 3
+Java исходник 5
+```java
+public class AST {
+    public int sum(int a, int b) {
+        for (;;)make();
+    }
+}
+```
+Java исходник 6
+```java
+public class AST {
+    public int sum(int a, int b) {
+        for (;;)
+            make();
+    }
+}
+```
