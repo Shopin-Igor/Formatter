@@ -105,3 +105,78 @@ public class AST {
 }
 ```
 
+---
+## Конструкция MethodDeclaration
+
+### Правило
+Правило для форматирования для элемента (MethodDeclaration) AST дерева:
+```ebnf
+<MethodDeclaration> ::=
+    <Modifiers>? <Type> sp <Name> '(' <ParamList>? ')' sp <MethodBodyOrSemi>;
+    
+<Modifiers> ::=
+    <Annotation>* <AccessModifier>? <MethodModifier>*;
+    
+<AccessModifier> ::= 
+    "public" | "protected" | "private" ;
+
+<MethodModifier> ::=
+    "abstract" | "static" | "final" | "synchronized" | "native";
+
+<MethodBodyOrSemi> ::= 
+    <Block> | ';';
+
+<ParamList> ::=
+    <Param> ( ',' sp <Param> )*;
+
+<Block> ::= 
+    '{' nl indent (<Stmt>)* nl dedent '}';
+```
+
+### Пример 1
+Java исходник 1
+```java
+public class AST {
+    public int sum(int a,int b){if(a==b){return 2*a;}return a+b;}
+}
+```
+Java исходник 2
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if(a==b){return 2*a;}return a+b;
+    }
+}
+```
+
+### Пример 2
+Java исходник 3
+
+```java
+public class AST {
+    public int sum(Parameter a,Parameter b,Parameter c,Parameter d) {}
+}
+```
+Java исходник 4
+```java
+public class AST {
+    public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {
+        
+    }
+}
+```
+
+### Пример 3
+Java исходник 5
+```java
+abstract class AST {
+    public abstract int sum(Input 
+                                        input);
+}
+```
+Java исходник 6
+```java
+abstract class AST {
+    public abstract int sum(Input input);
+}
+```
