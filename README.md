@@ -1,98 +1,328 @@
-# Formatter 
-## Введение
-1. сделать репозиторий (сдавать пулл реквестами)
-2. названия комитов определяют смысл задания
-3. отдебагать форматтер
-4. написать тесты под свой форматтер
+# Ниже представлена документация о том, как выглядит форматирование Java code правилами на EBNF подобном языке
+
+## ТОDO
+- разобраться с переменными, имеющими * и ?
 
 ---
-**Итог:**  можно будет просто задавать новые правила, и быстро настроить под себя форматтер
+### Новые термины форматтера
+- **sp** - один пробел
+- **nl** - перенос на новую строку
+- **indent** - увеличить уровень отступа на 1 таб
+- **dedent** - уменьшить уровень отступа на 1 таб
 
-## Формат взаимодействия
-- Созваниваемся каждые 2-3 дня, ставим задачи для следующей встречи
-- Игорь делает запланированное к следующей встрече. Выполненная задача - это замерженный в master код
-- Кто мержит pull request в основную ветку - только Леша. Игорь может пушить в любые другие ветки
+---
+### Кратко о написанном ниже:
+- фигурируют 3 конструкции: **IfStmt, MethodDeclaration, ForStmt**
+- описаны крайние случаи, есть по **3** примера с разным форматированием на каждое правило
 
-## Дальнейшие действия
-### Познакомиться с другими решениями (ast-grep)
+---
+### Definition of done (для всех правил):
+- описанное на EBNF правило (причём только то, которое я написал, чтобы было нагляднее) для форматирования применяется на Java исходник под **Было** и получается Java исходник под **Стало**
 
-#### Задание 12.11
-- [x] Прочитать первую главу - https://git-scm.com/book/en/v2 или https://git-scm.com/book/ru/v2
-#### Задание 14.11
-- [x] Прочитать 2 главу книги про git (https://git-scm.com/book/ru/v2)
-- [x] Научиться устанавливать пакеты ubuntu из консоли через apt или apt-get. Установить через apt консольный git. Нельзя пользовать gui приложениями
-- [x] Научиться делать git init, commit, fetch, push, пушить код в github. Нужно создать локально git репозиторий, добавить текстовый файлик с любым текстом, запушить в новый репозиторий гитхаб. Читать что угодно, где угодно. Итог: на созвоне Игорь может проделать это в лайве
+---
+## Конструкция IfStmt
 
-#### Задание 17.11
-- [x] Поправить замечания в первом pull request
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
+```ebnf
+<IfStmt> ::=
+    "if" '(' <Expr> ')' <IfBody>
+    [ "else" <ElseBody> ];
 
-#### Задание 21.11
-- [ ] Дочитать 2 главу и прочитать 3 главу по git
-- [ ] Написать правило на ast-grep, чтобы хотя бы 1 тест; сделать pull request; весть цикл разработки сделать на linux (в том числе работать в ide на линуксе), коммитить/пушить через консольный git; PR сделать на github
+<IfBody> ::= 
+    <Block> | <Stmt>;
 
-#### Задание 28.11
-- [ ] На сайте ast-grep продемонстрировать, как отформатировать пример (ниже)
-- [ ] Узнать, когда первая контрольная точка
+<Block> ::= 
+    '{' (<Stmt>)* '}';
 
-##### Пример
-До:
-```java
-class Main { int a; int b; int f(int c, int d) { return 0;} }
+<ElseBody> ::= 
+    <IfStmt> | <IfBody>;
+<Stmt*>    ::=
+    (<Stmt>)*
 ```
-После:
+
+### Правило
+Правило для форматирования для IfStmt AST дерева + для некоторых его вложенных конструкций:
+```ebnf
+<IfStmt> ::=
+    "if" sp '(' <Expr> ')' sp <IfBody>
+    [ sp "else" sp <ElseBody> ];
+
+<Stmt> ::= 
+    ( nl indent <Stmt> dedent );
+
+<Block> ::= 
+    '{' nl indent <Stmt*> nl dedent '}';
+```
+
+### Пример 1
+#### Было:
 ```java
-class Main {
-  int a;
-  int b;
-  int f(int c, int d) {
-    return 0;
-  }
+public class AST {
+    public int sum(int a, int b) {
+        if(a == b){return 2 * a;}
+        return a + b;
+    }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if (a == b) {
+            return 2 * a;
+        }
+        return a + b;
+    }
 }
 ```
 
-#### Задание 01.12
-- [ ] Подключить парсер sql (подробнее обсудим 28.11)
-
-#### Backlog
-- Помучиться с astgrep:
-  - Написать 3 теста, которые вызывают ast-grep.
-    - Каждый тест получает из yaml:
-      - Исходный код на java
-      - Правило для ast-grep
-      - Исходный код на java, который должен получиться после форматирования
-    - Тест запускает ast-grep, на вход ast-grep передает полученное из предыдущего пункта; сверяет вывод ast-grep с ожидаемым из предыдущего пункта. 
-
-- Потом пойдем в свой движок на SQL:
- - Определить начальный функционал, подключить парсер sql, подключить парсер python, написать простое правило поиска
-- Книга "Компиляторы. Принципы, технологии и инструментарий | Ахо Альфред В., Лам Моника С." (dragon book)
-- Вынести тесты в отдельный yaml: см. пример ниже;
-- Написать тесты на python (используя unittest или pytest), которые будут грузить тесты из yaml, запускать ast-grep, передавать ему на вход правила и expected, получать actual и сравнивать
-  - Разрабатывать нужно в https://www.jetbrains.com/pycharm, использовать для сборки проекта [uv](https://docs.astral.sh/uv/)
-- По итогу должен быть набор тестов, которые можно запустить одной кнопкой/командой и все тесты будут падать, т.к. ast-grep еще не настроен (при этом тесты могут падать). 
-(Опционально) Тесты должны запускаться в докер контейнере
-
-Пример тестов:
-```yaml
-cases:
- - case1
-   expected: |
-    class Main {record A(int x) {};}
-
-   actual: |
-    class Main {
-      record A(int x) {
-      };
+### Пример 2
+#### Было:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if(a == b)return 2 * a;
+        else return a + b;
     }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if (a == b) 
+            return 2 * a;
+        else 
+            return a + b;
+    }
+}
 ```
 
-### Расписать подробнее roadmap
-- PoC (Proof of concept) языка правил:
-  - есть cli утилита, которая похожа на ast-grep. Она поддерживает язык правил, который может форматировать арифметические выражения java
-  - может форматировать отступы для блоков (классы, методы, интерфейсы)
-  - может форматировать всю цепочку вызовов: a.m().m().m().m()
-- PoC визуализации работы правила форматтера:
-  - Нужно скрестить https://ast-grep.github.io/playground.html и https://regex101.com/. Когда поисковой запрос не находит узел AST, нужно легко понимать, почему так
-  
-  
-###
-  
+### Пример 3
+#### Было:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if(a == b)return 2 * a;
+        else if((a&2)==2) return a + b;
+        else return b;
+    }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if (a == b)
+            return 2 * a;
+        else if ((a&2)==2) 
+            return a + b;
+        else 
+            return b;
+    }
+}
+```
+
+---
+## Конструкция MethodDeclaration
+
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
+```ebnf
+<MethodDeclaration> ::=
+    <Modifiers>? <Type> <Name> '(' <ParamList>? ')' <MethodBodyOrSemi>;
+    
+<Modifiers> ::=
+    <Annotation>* <AccessModifier>? <MethodModifier>*;
+    
+<AccessModifier> ::= 
+    "public" | "protected" | "private";
+
+<MethodModifier> ::=
+    "abstract" | "static" | "final" | "synchronized" | "native";
+
+<MethodBodyOrSemi> ::= 
+    <Block> | ';';
+
+<ParamList>        ::=
+    <Param> ( ',' <Param> )*;
+
+<Block> ::= 
+    '{' (<Stmt>)* '}';
+<Stmt*>            ::=
+    (<Stmt>)*
+<ParamList?>       ::=
+    <ParamList>?
+<Modifiers?>       ::=
+    <Modifiers>?
+    
+<AddParam*>        ::=
+    ( ',' sp <Param> )*
+
+```
+
+### Правило
+Правило для форматирования для элемента (MethodDeclaration) AST дерева + для некоторых его вложенных конструкций:
+```ebnf
+<MethodDeclaration> ::=
+    <Modifiers?> <Type> sp <Name> '(' <ParamList?> ')' sp <MethodBodyOrSemi>;
+        
+<ParamList> ::=
+    <Param> <AddParam*>;
+
+<Block> ::= 
+    '{' nl indent <Stmt*> nl dedent '}';
+```
+
+### Пример 1
+#### Было:
+```java
+public class AST {
+    public int sum(int a,int b){if(a==b){return 2*a;}return a+b;}
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        if(a==b){return 2*a;}return a+b;
+    }
+}
+```
+
+### Пример 2
+#### Было:
+```java
+public class AST {
+    public int sum(Parameter a,Parameter b,Parameter c,Parameter d) {}
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {
+        
+    }
+}
+```
+
+### Пример 3
+#### Было:
+```java
+abstract class AST {
+    public abstract int sum(Input 
+                                        input);
+}
+```
+#### Стало:
+```java
+abstract class AST {
+    public abstract int sum(Input input);
+}
+```
+
+---
+## Конструкция ForStmt
+
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
+```ebnf
+<ForStmt> ::=
+    "for" "(" <ForInit>? ";" <Condition>? ";" <ForUpdate>? ")" <ForBody>;
+
+<ForInit>   ::= 
+    <ExprList>;
+    
+<Condition> ::= 
+    <Expr>;                         // bool Expr
+
+<ForUpdate> ::= 
+    <ExprList>;
+
+<ExprList>  
+    ::= <Expr> ( "," <Expr> )*;
+
+<ForBody> ::= 
+    <Block> | (<Stmt>);
+<ForInit?>
+    ::= <ForInit>?
+<Condition?>
+    ::= <Condition>?
+<ForUpdate?>
+    ::= <ForUpdate>?
+<AddExpr*>
+    ::= ( "," sp <Expr> )*
+```
+
+### Правило
+Правило для форматирования для элемента (ForStmt) AST дерева + для некоторых его вложенных конструкций:
+```ebnf
+<ForStmt> ::=
+    "for" sp "(" <ForInit?> ";" sp <Condition?> ";" sp <ForUpdate?> ")" sp <ForBody>;
+
+<ExprList>  
+    ::= <Expr> <AddExpr*>;
+
+<Stmt> ::= 
+    nl indent <Stmt> dedent;
+```
+
+### Пример 1
+#### Было:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0;i<5;++i){sm += i;}
+    }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0; i<5; ++i) {
+            sm += i;
+        }
+    }
+}
+```
+
+### Пример 2
+#### Было:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0;i<5;++i)sm += i;
+    }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        int sm = 0;
+        for (int i=0; i<5; ++i)
+            sm += i;
+    }
+}
+```
+
+### Пример 3
+#### Было:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        for (;;)make();
+    }
+}
+```
+#### Стало:
+```java
+public class AST {
+    public int sum(int a, int b) {
+        for (;;)
+            make();
+    }
+}
+```
