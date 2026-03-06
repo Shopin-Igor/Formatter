@@ -19,21 +19,34 @@
 ---
 ## Конструкция IfStmt
 
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
+```ebnf
+<IfStmt> ::=
+    "if" '(' <Expr> ')' <IfBody>
+    [ "else" <ElseBody> ];
+
+<IfBody> ::= 
+    <Block> | <Stmt>;
+
+<Block> ::= 
+    '{' (<Stmt>)* '}';
+
+<ElseBody> ::= 
+    <IfStmt> | <IfBody>;
+```
+
 ### Правило
-Правило для форматирования для элемента (IfStmt) AST дерева:
+Правило для форматирования для IfStmt AST дерева + для некоторых его вложенных конструкций:
 ```ebnf
 <IfStmt> ::=
     "if" sp '(' <Expr> ')' sp <IfBody>
     [ sp "else" sp <ElseBody> ];
 
-<IfBody> ::= 
-    <Block> | ( nl indent <Stmt> dedent );
+<Stmt> ::= 
+    ( nl indent <Stmt> dedent );
 
 <Block> ::= 
     '{' nl indent (<Stmt>)* nl dedent '}';
-
-<ElseBody> ::= 
-    <IfStmt> | <IfBody>;
 ```
 
 ### Пример 1
@@ -108,17 +121,16 @@ public class AST {
 ---
 ## Конструкция MethodDeclaration
 
-### Правило
-Правило для форматирования для элемента (MethodDeclaration) AST дерева:
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
 ```ebnf
 <MethodDeclaration> ::=
-    <Modifiers>? <Type> sp <Name> '(' <ParamList>? ')' sp <MethodBodyOrSemi>;
+    <Modifiers>? <Type> <Name> '(' <ParamList>? ')' <MethodBodyOrSemi>;
     
 <Modifiers> ::=
     <Annotation>* <AccessModifier>? <MethodModifier>*;
     
 <AccessModifier> ::= 
-    "public" | "protected" | "private" ;
+    "public" | "protected" | "private";
 
 <MethodModifier> ::=
     "abstract" | "static" | "final" | "synchronized" | "native";
@@ -126,6 +138,19 @@ public class AST {
 <MethodBodyOrSemi> ::= 
     <Block> | ';';
 
+<ParamList> ::=
+    <Param> ( ',' <Param> )*;
+
+<Block> ::= 
+    '{' (<Stmt>)* '}';
+```
+
+### Правило
+Правило для форматирования для элемента (MethodDeclaration) AST дерева + для некоторых его вложенных конструкций:
+```ebnf
+<MethodDeclaration> ::=
+    <Modifiers>? <Type> sp <Name> '(' <ParamList>? ')' sp <MethodBodyOrSemi>;
+        
 <ParamList> ::=
     <Param> ( ',' sp <Param> )*;
 
@@ -184,11 +209,10 @@ abstract class AST {
 ---
 ## Конструкция ForStmt
 
-### Правило
-Правило для форматирования для элемента (ForStmt) AST дерева:
+### Детектинг конструкции по шаблону (игнорируя whitespaces)
 ```ebnf
 <ForStmt> ::=
-    "for" sp "(" <ForInit>? ";" sp <Condition>? ";" sp <ForUpdate>? ")" sp <ForBody>;
+    "for" "(" <ForInit>? ";" <Condition>? ";" <ForUpdate>? ")" <ForBody>;
 
 <ForInit>   ::= 
     <ExprList>;
@@ -200,10 +224,23 @@ abstract class AST {
     <ExprList>;
 
 <ExprList>  
-    ::= <Expr> ( "," sp <Expr> )*;
+    ::= <Expr> ( "," <Expr> )*;
 
 <ForBody> ::= 
-    <Block> | ( nl indent <Stmt> dedent );
+    <Block> | (<Stmt>);
+```
+
+### Правило
+Правило для форматирования для элемента (ForStmt) AST дерева + для некоторых его вложенных конструкций:
+```ebnf
+<ForStmt> ::=
+    "for" sp "(" <ForInit>? ";" sp <Condition>? ";" sp <ForUpdate>? ")" sp <ForBody>;
+
+<ExprList>  
+    ::= <Expr> ( "," sp <Expr> )*;
+
+<Stmt> ::= 
+    nl indent <Stmt> dedent;
 ```
 
 ### Пример 1
