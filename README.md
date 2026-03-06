@@ -33,6 +33,8 @@
 
 <ElseBody> ::= 
     <IfStmt> | <IfBody>;
+<Stmt*>    ::=
+    (<Stmt>)*
 ```
 
 ### Правило
@@ -46,7 +48,7 @@
     ( nl indent <Stmt> dedent );
 
 <Block> ::= 
-    '{' nl indent (<Stmt>)* nl dedent '}';
+    '{' nl indent <Stmt*> nl dedent '}';
 ```
 
 ### Пример 1
@@ -138,24 +140,34 @@ public class AST {
 <MethodBodyOrSemi> ::= 
     <Block> | ';';
 
-<ParamList> ::=
+<ParamList>        ::=
     <Param> ( ',' <Param> )*;
 
 <Block> ::= 
     '{' (<Stmt>)* '}';
+<Stmt*>            ::=
+    (<Stmt>)*
+<ParamList?>       ::=
+    <ParamList>?
+<Modifiers?>       ::=
+    <Modifiers>?
+    
+<AddParam*>        ::=
+    ( ',' sp <Param> )*
+
 ```
 
 ### Правило
 Правило для форматирования для элемента (MethodDeclaration) AST дерева + для некоторых его вложенных конструкций:
 ```ebnf
 <MethodDeclaration> ::=
-    <Modifiers>? <Type> sp <Name> '(' <ParamList>? ')' sp <MethodBodyOrSemi>;
+    <Modifiers?> <Type> sp <Name> '(' <ParamList?> ')' sp <MethodBodyOrSemi>;
         
 <ParamList> ::=
-    <Param> ( ',' sp <Param> )*;
+    <Param> <AddParam*>;
 
 <Block> ::= 
-    '{' nl indent (<Stmt>)* nl dedent '}';
+    '{' nl indent <Stmt*> nl dedent '}';
 ```
 
 ### Пример 1
@@ -227,16 +239,24 @@ abstract class AST {
 
 <ForBody> ::= 
     <Block> | (<Stmt>);
+<ForInit?>
+    ::= <ForInit>?
+<Condition?>
+    ::= <Condition>?
+<ForUpdate?>
+    ::= <ForUpdate>?
+<AddExpr*>
+    ::= ( "," sp <Expr> )*
 ```
 
 ### Правило
 Правило для форматирования для элемента (ForStmt) AST дерева + для некоторых его вложенных конструкций:
 ```ebnf
 <ForStmt> ::=
-    "for" sp "(" <ForInit>? ";" sp <Condition>? ";" sp <ForUpdate>? ")" sp <ForBody>;
+    "for" sp "(" <ForInit?> ";" sp <Condition?> ";" sp <ForUpdate?> ")" sp <ForBody>;
 
 <ExprList>  
-    ::= <Expr> ( "," sp <Expr> )*;
+    ::= <Expr> <AddExpr*>;
 
 <Stmt> ::= 
     nl indent <Stmt> dedent;
