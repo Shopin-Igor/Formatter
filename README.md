@@ -1,4 +1,4 @@
-## Ниже представлена документация о том, как выглядит форматирование Java code правилами на EBNF подобном языке
+# Ниже представлена документация о том, как выглядит форматирование Java code правилами на EBNF подобном языке
 
 ---
 ### Новые термины форматтера
@@ -14,7 +14,7 @@
 
 ---
 ### Definition of done (для всех правил):
-- описанное на EBNF правило (причём только то, которое я написал, чтобы было нагляднее) для форматирования применяется на Java исходник с нечётным номером N и получается Java исходник с номером N + 1  
+- описанное на EBNF правило (причём только то, которое я написал, чтобы было нагляднее) для форматирования применяется на Java исходник под **Было** и получается Java исходник под **Стало**
 
 ---
 ## Конструкция IfStmt
@@ -50,7 +50,7 @@
 ```
 
 ### Пример 1
-Java исходник 1
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -59,7 +59,7 @@ public class AST {
     }
 }
 ```
-Java исходник 2
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -72,7 +72,7 @@ public class AST {
 ```
 
 ### Пример 2
-Java исходник 3
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -81,7 +81,7 @@ public class AST {
     }
 }
 ```
-Java исходник 4
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -94,7 +94,7 @@ public class AST {
 ```
 
 ### Пример 3
-Java исходник 5
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -104,7 +104,7 @@ public class AST {
     }
 }
 ```
-Java исходник 6
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -159,13 +159,13 @@ public class AST {
 ```
 
 ### Пример 1
-Java исходник 1
+#### Было:
 ```java
 public class AST {
     public int sum(int a,int b){if(a==b){return 2*a;}return a+b;}
 }
 ```
-Java исходник 2
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -175,14 +175,13 @@ public class AST {
 ```
 
 ### Пример 2
-Java исходник 3
-
+#### Было:
 ```java
 public class AST {
     public int sum(Parameter a,Parameter b,Parameter c,Parameter d) {}
 }
 ```
-Java исходник 4
+#### Стало:
 ```java
 public class AST {
     public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {
@@ -192,14 +191,14 @@ public class AST {
 ```
 
 ### Пример 3
-Java исходник 5
+#### Было:
 ```java
 abstract class AST {
     public abstract int sum(Input 
                                         input);
 }
 ```
-Java исходник 6
+#### Стало:
 ```java
 abstract class AST {
     public abstract int sum(Input input);
@@ -244,7 +243,7 @@ abstract class AST {
 ```
 
 ### Пример 1
-Java исходник 1
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -253,7 +252,7 @@ public class AST {
     }
 }
 ```
-Java исходник 2
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -266,7 +265,7 @@ public class AST {
 ```
 
 ### Пример 2
-Java исходник 3
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -275,7 +274,7 @@ public class AST {
     }
 }
 ```
-Java исходник 4
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -287,7 +286,7 @@ public class AST {
 ```
 
 ### Пример 3
-Java исходник 5
+#### Было:
 ```java
 public class AST {
     public int sum(int a, int b) {
@@ -295,7 +294,7 @@ public class AST {
     }
 }
 ```
-Java исходник 6
+#### Стало:
 ```java
 public class AST {
     public int sum(int a, int b) {
