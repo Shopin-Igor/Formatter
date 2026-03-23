@@ -265,7 +265,7 @@ public class FormatterEngineE2ETest {
         RuleRegistry ruleRegistry = new RuleRegistry();
         ruleRegistry.registerAll(List.of(rules));
 
-        TypeRegistry typeRegistry = new TypeRegistry();
+        TypeRegistryUniversal typeRegistry = new TypeRegistryUniversal();
         PatternMatcher patternMatcher = new PatternMatcher(typeRegistry);
         TemplateRenderer templateRenderer = new TemplateRenderer();
 
