@@ -44,7 +44,7 @@ public final class PatternMatcher {
             return false;
         }
 
-        TypeSpec spec = typeRegistry.get(pat.typeName());
+        TypeSpec spec = typeRegistry.requireByDslName(pat.typeName());
         if (spec == null) {
             return false;
         }
