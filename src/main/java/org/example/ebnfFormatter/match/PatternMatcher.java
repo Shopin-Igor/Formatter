@@ -3,6 +3,7 @@ package org.example.ebnfFormatter.match;
 import com.github.javaparser.ast.Node;
 import org.example.ebnfFormatter.model.pattern.*;
 import org.example.ebnfFormatter.runtime.TypeRegistry;
+import org.example.ebnfFormatter.runtime.TypeRegistryUniversal;
 import org.example.ebnfFormatter.runtime.TypeSpec;
 
 import java.lang.reflect.Array;
@@ -12,9 +13,9 @@ import java.util.Objects;
 
 public final class PatternMatcher {
 
-    private final TypeRegistry typeRegistry;
+    private final TypeRegistryUniversal typeRegistry;
 
-    public PatternMatcher(TypeRegistry typeRegistry) {
+    public PatternMatcher(TypeRegistryUniversal typeRegistry) {
         this.typeRegistry = typeRegistry;
     }
 
@@ -36,6 +37,28 @@ public final class PatternMatcher {
     }
 
     private boolean matchRuleRef(RuleRef ref, Object value, Bindings bindings) {
+        if (value == null) {
+            return bindings.bind(ref.name(), null);
+        }
+
+        TypeSpec spec;
+        try {
+            spec = typeRegistry.requireByDslName(ref.name());
+        } catch (IllegalArgumentException e) {
+            return bindings.bind(ref.name(), value);
+        }
+
+        if (value instanceof Node node) {
+            if (!spec.javaType().isInstance(node)) {
+                return false;
+            }
+            return bindings.bind(ref.name(), value);
+        }
+
+        if (!spec.javaType().isInstance(value)) {
+            return false;
+        }
+
         return bindings.bind(ref.name(), value);
     }
 
