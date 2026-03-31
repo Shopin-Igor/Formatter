@@ -22,8 +22,17 @@ public class FromRulesAndCodeToFormattedCodeTest {
     @Test
     void endToEndForStmt() {
         String rules = """
-            <ForStmt> ::= ForStmt
-                => "for";
+            <ForStmt> ::= ForStmt(body=<Statement>)
+                => "for" sp "(" ";" ";" ")" nl indent <Statement> dedent;
+
+            <Statement> ::= ExpressionStmt(expression=<Expression>)
+                => <Expression> ";";
+
+            <Expression> ::= MethodCallExpr(name=<SimpleName>)
+                => <SimpleName> "(" ")";
+
+            <SimpleName> ::= SimpleName(identifier="make")
+                => "make";
             """;
 
         String code = """
@@ -33,6 +42,11 @@ public class FromRulesAndCodeToFormattedCodeTest {
                 }
             }
             """;
+
+        String expected = """
+            for (;;)
+                make();
+            """.trim();
 
         List<RuleDef> parsed = parseRules(rules);
 
@@ -50,7 +64,7 @@ public class FromRulesAndCodeToFormattedCodeTest {
 
         String formatted = engine.format(node, "ForStmt");
 
-        assertThat(formatted).isEqualTo("for");
+        assertThat(formatted).isEqualTo(expected);
     }
 
     private List<RuleDef> parseRules(String text) {
