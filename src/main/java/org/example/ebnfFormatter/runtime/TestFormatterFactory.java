@@ -23,7 +23,7 @@ public final class TestFormatterFactory {
         ruleRegistry.registerAll(rulesFromDocumentation());
 
         TypeRegistryUniversal typeRegistry = new TypeRegistryUniversal();
-        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry);
+        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry, ruleRegistry);
         TemplateRenderer templateRenderer = new TemplateRenderer();
 
         return new FormatterEngine(ruleRegistry, patternMatcher, templateRenderer);

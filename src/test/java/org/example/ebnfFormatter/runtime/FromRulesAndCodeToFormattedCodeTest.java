@@ -40,7 +40,7 @@ public class FromRulesAndCodeToFormattedCodeTest {
         ruleRegistry.registerAll(parsed);
 
         TypeRegistryUniversal typeRegistry = new TypeRegistryUniversal();
-        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry);
+        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry, ruleRegistry);
         TemplateRenderer templateRenderer = new TemplateRenderer();
         FormatterEngine engine = new FormatterEngine(ruleRegistry, patternMatcher, templateRenderer);
 
