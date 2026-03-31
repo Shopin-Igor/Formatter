@@ -17,14 +17,6 @@ public final class RuleRegistry {
         }
     }
 
-    public List<RuleDef> require(String ruleName) {
-        List<RuleDef> rule = rulesByName.get(ruleName);
-        if (rule == null) {
-            throw new IllegalArgumentException("Unknown rule: " + ruleName);
-        }
-        return rule;
-    }
-
     public List<RuleDef> requireAll(String ruleName) {
         List<RuleDef> rules = rulesByName.get(ruleName);
         if (rules == null || rules.isEmpty()) {
