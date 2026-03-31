@@ -79,10 +79,6 @@ public final class PatternMatcher {
         }
 
         TypeSpec spec = typeRegistry.requireByDslName(pat.typeName());
-        if (spec == null) {
-            return false;
-        }
-
         if (!spec.javaType().isInstance(node)) {
             return false;
         }
