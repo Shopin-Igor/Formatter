@@ -22,15 +22,14 @@ public final class FormatterEngine {
     }
 
     public String format(Node node, String ruleName) {
-        RuleDef rule = ruleRegistry.require(ruleName);
-        MatchResult match = patternMatcher.match(rule.pattern(), node);
-
-        if (!match.matched()) {
-            throw new IllegalArgumentException(
-                    "Node does not match rule <" + ruleName + ">"
-            );
+        for (RuleDef rule : ruleRegistry.requireAll(ruleName)) {
+            MatchResult match = patternMatcher.match(rule.pattern(), node);
+            if (match.matched()) {
+                return templateRenderer.render(rule.format(), match.bindings());
+            }
         }
-
-        return templateRenderer.render(rule.format(), match.bindings());
+        throw new IllegalArgumentException(
+                "Node does not match any rule <" + ruleName + ">"
+        );
     }
 }
