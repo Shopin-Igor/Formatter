@@ -93,11 +93,6 @@ public final class TypeRegistryUniversal {
         }
 
         PropertySpec property = spec.property(propertyName);
-        if (property == null) {
-            throw new IllegalArgumentException(
-                    "Unknown property '" + propertyName + "' for DSL type " + spec.dslName()
-            );
-        }
 
         Object raw = property.get(node);
         return normalizePropertyValue(raw);
