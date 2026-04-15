@@ -1,12 +1,13 @@
 package org.example.ebnfFormatter.render;
 
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.stmt.BlockStmt;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
-import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.*;
+import org.example.ebnfFormatter.match.AppliedRuleValue;
 import org.example.ebnfFormatter.match.Bindings;
+import org.example.ebnfFormatter.match.BoundValue;
+import org.example.ebnfFormatter.match.RawValue;
 import org.example.ebnfFormatter.model.format.*;
 
 import java.lang.reflect.Array;
@@ -18,38 +19,44 @@ import java.util.Optional;
 public final class TemplateRenderer {
 
     public String render(FormatAst format, Bindings bindings) {
+        return render(format, bindings, (ruleName, value) -> Optional.empty());
+    }
+
+    public String render(FormatAst format, Bindings bindings, NestedRuleRenderer nestedRuleRenderer) {
         RenderContext context = new RenderContext();
-        renderInto(format, bindings, context);
+        renderInto(format, bindings, nestedRuleRenderer, context);
         return context.result();
     }
 
-    private void renderInto(FormatAst format, Bindings bindings, RenderContext context) {
+    private void renderInto(
+            FormatAst format,
+            Bindings bindings,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context
+    ) {
         switch (format) {
             case FormatText text -> context.appendText(text.text());
 
-            case FormatPlaceholder placeholder -> {
-                Object value = bindings.getRequired(placeholder.name());
-                renderValue(value, context);
-            }
+            case FormatPlaceholder placeholder ->
+                    renderPlaceholder(placeholder.name(), bindings, nestedRuleRenderer, context);
 
             case FormatDirective directive -> renderDirective(directive, context);
 
             case FormatSeq seq -> {
                 for (FormatAst item : seq.items()) {
-                    renderInto(item, bindings, context);
+                    renderInto(item, bindings, nestedRuleRenderer, context);
                 }
             }
 
-            case FormatGroup group -> renderInto(group.body(), bindings, context);
+            case FormatGroup group -> renderInto(group.body(), bindings, nestedRuleRenderer, context);
 
             case FormatIfPresent ifPresent -> {
-                Object value = bindings.find(ifPresent.name());
-                if (isPresent(value)) {
-                    renderInto(ifPresent.body(), bindings, context);
+                if (!bindings.findValues(ifPresent.name()).isEmpty()) {
+                    renderInto(ifPresent.body(), bindings, nestedRuleRenderer, context);
                 }
             }
 
-            case FormatJoin join -> renderJoin(join, bindings, context);
+            case FormatJoin join -> renderJoin(join, bindings, nestedRuleRenderer, context);
         }
     }
 
@@ -62,25 +69,70 @@ public final class TemplateRenderer {
         }
     }
 
-    private void renderJoin(FormatJoin join, Bindings bindings, RenderContext context) {
-        Object raw = bindings.find(join.placeholderName());
-        List<?> items = toList(raw);
-
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) {
-                renderInto(join.separator(), bindings, context);
-            }
-            renderValue(items.get(i), context);
+    private void renderPlaceholder(
+            String placeholderName,
+            Bindings bindings,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context
+    ) {
+        List<BoundValue> values = bindings.getRequiredValues(placeholderName);
+        for (BoundValue value : values) {
+            renderBoundValue(placeholderName, value, nestedRuleRenderer, context);
         }
     }
 
-    private void renderValue(Object value, RenderContext context) {
+    private void renderJoin(
+            FormatJoin join,
+            Bindings bindings,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context
+    ) {
+        List<BoundValue> items = bindings.findValues(join.placeholderName());
+
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) {
+                renderInto(join.separator(), bindings, nestedRuleRenderer, context);
+            }
+            renderBoundValue(join.placeholderName(), items.get(i), nestedRuleRenderer, context);
+        }
+    }
+
+    private void renderBoundValue(
+            String placeholderName,
+            BoundValue boundValue,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context
+    ) {
+        switch (boundValue) {
+            case AppliedRuleValue appliedRuleValue ->
+                    renderInto(
+                            appliedRuleValue.appliedRule().rule().format(),
+                            appliedRuleValue.appliedRule().bindings(),
+                            nestedRuleRenderer,
+                            context
+                    );
+            case RawValue rawValue -> renderRawValue(placeholderName, rawValue.value(), nestedRuleRenderer, context);
+        }
+    }
+
+    private void renderRawValue(
+            String placeholderName,
+            Object value,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context
+    ) {
         if (value == null) {
             return;
         }
 
+        Optional<String> nested = nestedRuleRenderer.tryRender(stripQuantifierSuffix(placeholderName), value);
+        if (nested.isPresent()) {
+            context.appendText(nested.get());
+            return;
+        }
+
         if (value instanceof Optional<?> optional) {
-            optional.ifPresent(v -> renderValue(v, context));
+            optional.ifPresent(v -> renderRawValue(placeholderName, v, nestedRuleRenderer, context));
             return;
         }
 
@@ -93,7 +145,7 @@ public final class TemplateRenderer {
             Iterator<?> it = iterable.iterator();
             while (it.hasNext()) {
                 Object item = it.next();
-                renderValue(item, context);
+                renderRawValue(placeholderName, item, nestedRuleRenderer, context);
             }
             return;
         }
@@ -102,7 +154,7 @@ public final class TemplateRenderer {
         if (type.isArray()) {
             int length = Array.getLength(value);
             for (int i = 0; i < length; i++) {
-                renderValue(Array.get(value, i), context);
+                renderRawValue(placeholderName, Array.get(value, i), nestedRuleRenderer, context);
             }
             return;
         }
@@ -126,7 +178,68 @@ public final class TemplateRenderer {
             return;
         }
 
+        if (node instanceof MethodDeclaration methodDeclaration) {
+            renderMethodDeclaration(methodDeclaration, context);
+            return;
+        }
+
+        if (node instanceof ReturnStmt returnStmt) {
+            renderReturnStmt(returnStmt, context);
+            return;
+        }
+
+        if (node instanceof ExpressionStmt expressionStmt) {
+            renderExpressionStmt(expressionStmt, context);
+            return;
+        }
+
+
         context.appendText(node.toString());
+    }
+
+    private void renderReturnStmt(com.github.javaparser.ast.stmt.ReturnStmt stmt, RenderContext context) {
+        context.appendText("return");
+        context.space();
+        context.appendText(stmt.getExpression().map(Node::toString).orElse(""));
+        context.appendText(";");
+    }
+
+    private void renderExpressionStmt(com.github.javaparser.ast.stmt.ExpressionStmt stmt, RenderContext context) {
+        context.appendText(stmt.getExpression().toString());
+        context.appendText(";");
+    }
+
+    private void renderMethodDeclaration(MethodDeclaration method, RenderContext context) {
+        if (!method.getModifiers().isEmpty()) {
+            for (int i = 0; i < method.getModifiers().size(); i++) {
+                if (i > 0) {
+                    context.space();
+                }
+                context.appendText(method.getModifiers().get(i).getKeyword().asString());
+            }
+            context.space();
+        }
+
+        context.appendText(method.getType().toString());
+        context.space();
+        context.appendText(method.getNameAsString());
+        context.appendText("(");
+
+        for (int i = 0; i < method.getParameters().size(); i++) {
+            if (i > 0) {
+                context.appendText(", ");
+            }
+            context.appendText(method.getParameter(i).toString());
+        }
+
+        context.appendText(")");
+
+        if (method.getBody().isPresent()) {
+            context.space();
+            renderBlockStmt(method.getBody().get(), context);
+        } else {
+            context.appendText(";");
+        }
     }
 
     private void renderBlockStmt(BlockStmt block, RenderContext context) {
@@ -245,6 +358,18 @@ public final class TemplateRenderer {
         }
 
         return true;
+    }
+
+    private String stripQuantifierSuffix(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+
+        char last = name.charAt(name.length() - 1);
+        return switch (last) {
+            case '?', '*', '+' -> name.substring(0, name.length() - 1);
+            default -> name;
+        };
     }
 
     private List<?> toList(Object value) {
