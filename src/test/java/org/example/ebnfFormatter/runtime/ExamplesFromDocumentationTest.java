@@ -3,6 +3,7 @@ package org.example.ebnfFormatter.runtime;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import org.antlr.v4.runtime.CharStreams;
@@ -21,9 +22,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ExamplesFromDocumentationTest {
     private static final String ifStmtRules = """
-              <IfStmt> ::= IfStmt(condition=<Expression>, thenStmt=<Statement>, elseStmt?=<Statement>)
-            => "if" sp "(" <Expression> ")" sp <Statement>
-               ifpresent(Statement?, sp "else" sp <Statement?>);
+            <IfStmt> ::= IfStmt(condition=<CondExpr>, thenStmt=<ThenStmt>, elseStmt?=<ElseStmt>)
+              => "if" sp "(" <CondExpr> ")" <ThenStmt>
+                 ifpresent(ElseStmt, nl "else" <ElseStmt>);
+            
+            <ThenStmt> ::= BlockStmt(statements=[<Statement>*])
+              => sp "{" nl indent join(<Statement>, nl) nl dedent "}";
+            
+            <ThenStmt> ::= ReturnStmt(expression=<ThenExpr>)
+              => nl indent "return" sp <ThenExpr> ";" dedent;
+            
+            <ThenStmt> ::= ExpressionStmt(expression=<ThenExpr>)
+              => nl indent <ThenExpr> ";" dedent;
+            
+            <ElseStmt> ::= IfStmt
+              => sp <IfStmt>;
+            
+            <ElseStmt> ::= BlockStmt(statements=[<Statement>*])
+              => sp "{" nl indent join(<Statement>, nl) nl dedent "}";
+            
+            <ElseStmt> ::= ReturnStmt(expression=<ElseExpr>)
+              => nl indent "return" sp <ElseExpr> ";" dedent;
+            
+            <ElseStmt> ::= ExpressionStmt(expression=<ElseExpr>)
+              => nl indent <ElseExpr> ";" dedent;
             """;
 
     @Test
@@ -48,21 +70,6 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
 
     @Test
     void ifStmtExample2() {
-        String rules = """
-            <IfStmt> ::= IfStmt(condition=<CondExpr>, thenStmt=<ThenStmt>, elseStmt=<ElseStmt>)
-                => "if" sp "(" <CondExpr> ")" nl indent <ThenStmt> dedent
-                    nl "else" sp nl indent <ElseStmt> dedent;
-
-            <ThenStmt> ::= ReturnStmt(expression=<ThenExpr>)
-                => nl indent "return" sp <ThenExpr> ";" dedent;
-    
-            <ElseStmt> ::= ReturnStmt(expression=<ElseExpr>)
-                => nl indent "return" sp <ElseExpr> ";" dedent;
-    
-            <ElseStmt> ::= IfStmt
-                => <IfStmt>;
-            """;
-
         String code = """
                 public class AST {
                     public int sum(int a, int b) {
@@ -75,30 +82,15 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
         String expected = """
                 if (a == b)
                     return 2 * a;
-                else\s
+                else
                     return a + b;""";
 
-        String formatted = formatFirstNode(rules, code, IfStmt.class, "IfStmt");
+        String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
         assertThat(formatted).isEqualTo(expected);
     }
 
     @Test
     void ifStmtExample3() {
-        String rules = """
-            <IfStmt> ::= IfStmt(condition=<CondExpr>, thenStmt=<ThenStmt>, elseStmt=<ElseStmt>)
-                => "if" sp "(" <CondExpr> ")" nl indent <ThenStmt> dedent
-                    nl "else" sp nl indent <ElseStmt> dedent;
-
-            <ThenStmt> ::= ReturnStmt(expression=<ThenExpr>)
-                => nl indent "return" sp <ThenExpr> ";" dedent;
-    
-            <ElseStmt> ::= ReturnStmt(expression=<ElseExpr>)
-                => nl indent "return" sp <ElseExpr> ";" dedent;
-    
-            <ElseStmt> ::= IfStmt
-                => <IfStmt>;
-            """;
-
         String code = """
                 public class AST {
                     public int sum(int a, int b) {
@@ -112,36 +104,29 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
         String expected = """
                 if (a == b)
                     return 2 * a;
-                else\s
-                    if ((a & 2) == 2)
-                        return a + b;
-                    else
-                        return b;""";
+                else if ((a & 2) == 2)
+                    return a + b;
+                else
+                    return b;""";
 
-        String formatted = formatFirstNode(rules, code, IfStmt.class, "IfStmt");
+        String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
         assertThat(formatted).isEqualTo(expected);
     }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//    private static final String methodDeclarationRules = """
-//              <MethodDeclaration> ::= MethodDeclaration(
-//            modifiers=[<Modifier*>],
-//            type=<Type>,
-//            name=<SimpleName>,
-//            parameters=[<Parameter*>],
-//            body?=<Statement>)
-//                => join(<Modifier*>, sp) sp <Type> sp <SimpleName>
-//                   "(" ifpresent(Parameter*, join(<Parameter*>, ", ")) ")"
-//                   ifpresent(Statement?, sp <Statement?>);
-//            """;
+    private static final String methodDeclarationRules = """
+              <MethodDeclaration> ::= MethodDeclaration(
+                                        modifiers=[<Modifier>*],
+                                        type=<Type>,
+                                        name=<SimpleName>,
+                                        parameters=[<Parameter>*],
+                                        body?=<Statement>)
+                => join(<Modifier*>, "") <Type> sp <SimpleName>
+                   "(" ifpresent(Parameter*, join(<Parameter>, ", ")) ")"
+                   ifpresent(Statement?, sp <Statement>);
+              """;
 
     @Test
     void methodDeclarationExample1() {
-        String rules = """
-                <MethodDeclaration> ::= MethodDeclaration(body=BlockStmt)
-                    => "public" sp "int" sp "sum" "(" "int a, int b" ")" sp "{"
-                       nl indent "if(a==b){return 2*a;}return a+b;" nl dedent "}";
-                """;
-
         String code = """
                 public class AST {
                     public int sum(int a,int b){if(a==b){return 2*a;}return a+b;}
@@ -150,22 +135,18 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
 
         String expected = """
                 public int sum(int a, int b) {
-                    if(a==b){return 2*a;}return a+b;
+                    if (a == b) {
+                        return 2 * a;
+                    }
+                    return a + b;
                 }""";
 
-        String formatted = formatFirstNode(rules, code, MethodDeclaration.class, "MethodDeclaration");
+        String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
     }
 
     @Test
     void methodDeclarationExample2() {
-        String rules = """
-                <MethodDeclaration> ::= MethodDeclaration(body=BlockStmt)
-                    => "public" sp "int" sp "sum" "("
-                       "Parameter a, Parameter b, Parameter c, Parameter d"
-                       ")" sp "{" nl indent nl dedent "}";
-                """;
-
         String code = """
                 public class AST {
                     public int sum(Parameter a,Parameter b,Parameter c,Parameter d) {}
@@ -177,18 +158,12 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
 
                 }""";
 
-        String formatted = formatFirstNode(rules, code, MethodDeclaration.class, "MethodDeclaration");
+        String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
     }
 
     @Test
     void methodDeclarationExample3() {
-        String rules = """
-            <MethodDeclaration> ::= MethodDeclaration
-                => "public" sp "abstract" sp "int" sp "sum" "(" "Input input" ")" ";";
-            """;
-
-
         String code = """
                 abstract class AST {
                     public abstract int sum(Input
@@ -196,43 +171,36 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 }
                 """;
 
-        String expected = "public abstract int sum(Input input);";
+        String expected = "public abstract int sum(Input input)";
 
-        String formatted = formatFirstNode(rules, code, MethodDeclaration.class, "MethodDeclaration");
+        String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//    private static final String forStmtRules = """
-//            <ForStmt> ::= ForStmt(
-//                initialization=[<Expression*>],
-//                compare?=<Expression>,
-//                update=[<Expression*>],
-//                body=<Statement>
-//            )
-//                => "for" sp "("
-//                   ifpresent(Expression*, join(<Expression*>, ", "))
-//                   ";" ifpresent(Expression?, sp <Expression?>)
-//                   ";" ifpresent(Expression*, sp join(<Expression*>, ", "))
-//                   ")" sp <ForBody>;
-//
-//            <ForBody> ::= BlockStmt(statements=[<Statement*>])
-//                => "{" nl indent join(<Statement*>, nl) nl dedent "}";
-//
-//            <ForBody> ::= ExpressionStmt(expression=<Expression>)
-//                => nl indent <Expression> ";" dedent;
-//
-//            <ForBody> ::= ReturnStmt(expression=<Expression>)
-//                => nl indent "return" sp <Expression> ";" dedent;
-//            """;
+    private static final String forStmtRules = """
+            <ForStmt> ::= ForStmt(
+                            initialization=[<InitExpr>*],
+                            compare?=<CompareExpr>,
+                            update=[<UpdateExpr>*],
+                            body=<ForBody>)
+              => "for" sp "("
+                 ifpresent(InitExpr, join(<InitExpr>, ", "))
+                 ";" ifpresent(CompareExpr, sp <CompareExpr>)
+                 ";" ifpresent(UpdateExpr, sp join(<UpdateExpr>, ", "))
+                 ")" <ForBody>;
+
+            <ForBody> ::= BlockStmt(statements=[<Statement>*])
+              => sp "{" nl indent join(<Statement>, nl) nl dedent "}";
+
+            <ForBody> ::= ExpressionStmt(expression=<ForExpr>)
+              => nl indent <ForExpr> ";" dedent;
+
+            <ForBody> ::= ReturnStmt(expression=<ForExpr>)
+              => nl indent "return" sp <ForExpr> ";" dedent;
+            """;
     @Test
     void forStmtExample1() {
-        String rules = """
-                  <ForStmt> ::= ForStmt(body=BlockStmt)
-                        => "for" sp "(" "int i=0" ";" sp "i<5" ";" sp "++i" ")" sp "{"
-                            nl indent "sm += i;" nl dedent "}";
-                  """;
-
         String code = """
                 public class AST {
                     public int sum(int a, int b) {
@@ -243,21 +211,16 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 """;
 
         String expected = """
-                for (int i=0; i<5; ++i) {
+                for (int i = 0; i < 5; ++i) {
                     sm += i;
                 }""";
 
-        String formatted = formatFirstNode(rules, code, ForStmt.class, "ForStmt");
+        String formatted = formatFirstNode(forStmtRules, code, ForStmt.class, "ForStmt");
         assertThat(formatted).isEqualTo(expected);
     }
 
     @Test
     void forStmtExample2() {
-        String rules = """
-                 <ForStmt> ::= ForStmt(body=ExpressionStmt)
-                    => "for" sp "(" "int i=0" ";" sp "i<5" ";" sp "++i" ")" nl indent "sm += i;" dedent;
-                 """;
-
         String code = """
                 public class AST {
                     public int sum(int a, int b) {
@@ -268,29 +231,15 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 """;
 
         String expected = """
-                for (int i=0; i<5; ++i)
+                for (int i = 0; i < 5; ++i)
                     sm += i;""";
 
-        String formatted = formatFirstNode(rules, code, ForStmt.class, "ForStmt");
+        String formatted = formatFirstNode(forStmtRules, code, ForStmt.class, "ForStmt");
         assertThat(formatted).isEqualTo(expected);
     }
 
     @Test
     void forStmtExample3() {
-        String rules = """
-                <ForStmt> ::= ForStmt(body=<Statement>)
-                    => "for" sp "(" ";" ";" ")" nl indent <Statement> dedent;
-        
-                <Statement> ::= ExpressionStmt(expression=<Expression>)
-                    => <Expression> ";";
-        
-                <Expression> ::= MethodCallExpr(name=<SimpleName>)
-                    => <SimpleName> "(" ")";
-        
-                <SimpleName> ::= SimpleName(identifier="make")
-                    => "make";
-                """;
-
         String code = """
                 public class AST {
                     public int sum(int a, int b) {
@@ -303,7 +252,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 for (;;)
                     make();""";
 
-        String formatted = formatFirstNode(rules, code, ForStmt.class, "ForStmt");
+        String formatted = formatFirstNode(forStmtRules, code, ForStmt.class, "ForStmt");
         assertThat(formatted).isEqualTo(expected);
     }
 
