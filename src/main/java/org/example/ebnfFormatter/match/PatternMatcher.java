@@ -76,7 +76,7 @@ public final class PatternMatcher {
                     return bindings.bind(ref.name(), new AppliedRuleValue(appliedRule));
                 }
             }
-            return false;
+            return bindRawValueIfMatchesDslType(ref.name(), value, bindings);
         }
 
         if (value == null) {
@@ -93,6 +93,23 @@ public final class PatternMatcher {
         }
 
         return bindRawValue(ref.name(), value, bindings);
+    }
+
+    private boolean bindRawValueIfMatchesDslType(String refName, Object value, Bindings bindings) {
+        if (value == null) {
+            return false;
+        }
+
+        try {
+            TypeSpec spec = typeRegistry.requireByDslName(refName);
+            if (!spec.javaType().isInstance(value)) {
+                return false;
+            }
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        return bindRawValue(refName, value, bindings);
     }
 
     private boolean matchNodePat(NodePat pat, Object value, Bindings bindings) {
