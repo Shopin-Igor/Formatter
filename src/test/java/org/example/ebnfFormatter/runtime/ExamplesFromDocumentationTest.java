@@ -155,7 +155,6 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
 
         String expected = """
                 public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {
-
                 }""";
 
         String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
