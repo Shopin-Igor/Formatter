@@ -721,6 +721,52 @@ public class ALotOfEndToEndTest {
         );
     }
 
+    @Test
+    void fff() {
+        assertFormatsWholeFile(
+                """
+                class Deep {
+                    int run(int a, int b) {
+                        if (a > b) {
+                            while (i  < a) {
+                                if (i == b)
+                                return i;tick();++i;
+                            }
+                            return a;
+                        }
+                        else if (a == b) {
+                            for (i = 0;; i++)
+                                step();
+                        }
+                        else { b--;return b;}
+                    }
+                }
+                """,
+                """
+                class Deep {
+                    int run(int a, int b) {
+                        if (a > b) {
+                            while (i < a) {
+                                if (i == b)
+                                    return i;
+                                tick();
+                                ++i;
+                            }
+                            return a;
+                        }
+                        else if (a == b) {
+                            for (i = 0;; i++)
+                                step();
+                        }
+                        else {
+                            b--;
+                            return b;
+                        }
+                    }
+                }"""
+        );
+    }
+
     private static void assertFormatsWholeFile(String code, String expected) {
         String formatted = formatASTFromRootToLeafs(code);
         assertThat(formatted).isEqualTo(expected);
