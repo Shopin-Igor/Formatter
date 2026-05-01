@@ -1,9 +1,16 @@
 package org.example.ebnfFormatter.render;
 
+import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AssignExpr;
+import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.*;
+import com.github.javaparser.ast.type.PrimitiveType;
+import com.github.javaparser.metamodel.PropertyMetaModel;
 import org.example.ebnfFormatter.match.AppliedRuleValue;
 import org.example.ebnfFormatter.match.Bindings;
 import org.example.ebnfFormatter.match.BoundValue;
@@ -137,7 +144,7 @@ public final class TemplateRenderer {
         }
 
         if (value instanceof Node node) {
-            renderNode(node, context);
+            renderNode(node, nestedRuleRenderer, context);
             return;
         }
 
@@ -162,202 +169,17 @@ public final class TemplateRenderer {
         context.appendText(String.valueOf(value));
     }
 
-    private void renderNode(Node node, RenderContext context) {
-        if (node instanceof BlockStmt blockStmt) {
-            renderBlockStmt(blockStmt, context);
+    private void renderNode(Node node, NestedRuleRenderer nestedRuleRenderer, RenderContext context) {
+        Optional<String> renderedByJavaParserType = nestedRuleRenderer.tryRender(
+                node.getClass().getSimpleName(),
+                node
+        );
+        if (renderedByJavaParserType.isPresent()) {
+            context.appendText(renderedByJavaParserType.get());
             return;
         }
-
-        if (node instanceof IfStmt ifStmt) {
-            renderIfStmt(ifStmt, context);
-            return;
-        }
-
-        if (node instanceof ForStmt forStmt) {
-            renderForStmt(forStmt, context);
-            return;
-        }
-
-        if (node instanceof MethodDeclaration methodDeclaration) {
-            renderMethodDeclaration(methodDeclaration, context);
-            return;
-        }
-
-        if (node instanceof ReturnStmt returnStmt) {
-            renderReturnStmt(returnStmt, context);
-            return;
-        }
-
-        if (node instanceof ExpressionStmt expressionStmt) {
-            renderExpressionStmt(expressionStmt, context);
-            return;
-        }
-
 
         context.appendText(node.toString());
-    }
-
-    private void renderReturnStmt(com.github.javaparser.ast.stmt.ReturnStmt stmt, RenderContext context) {
-        context.appendText("return");
-        context.space();
-        context.appendText(stmt.getExpression().map(Node::toString).orElse(""));
-        context.appendText(";");
-    }
-
-    private void renderExpressionStmt(com.github.javaparser.ast.stmt.ExpressionStmt stmt, RenderContext context) {
-        context.appendText(stmt.getExpression().toString());
-        context.appendText(";");
-    }
-
-    private void renderMethodDeclaration(MethodDeclaration method, RenderContext context) {
-        if (!method.getModifiers().isEmpty()) {
-            for (int i = 0; i < method.getModifiers().size(); i++) {
-                if (i > 0) {
-                    context.space();
-                }
-                context.appendText(method.getModifiers().get(i).getKeyword().asString());
-            }
-            context.space();
-        }
-
-        context.appendText(method.getType().toString());
-        context.space();
-        context.appendText(method.getNameAsString());
-        context.appendText("(");
-
-        for (int i = 0; i < method.getParameters().size(); i++) {
-            if (i > 0) {
-                context.appendText(", ");
-            }
-            context.appendText(method.getParameter(i).toString());
-        }
-
-        context.appendText(")");
-
-        if (method.getBody().isPresent()) {
-            context.space();
-            renderBlockStmt(method.getBody().get(), context);
-        } else {
-            context.appendText(";");
-        }
-    }
-
-    private void renderBlockStmt(BlockStmt block, RenderContext context) {
-        context.appendText("{");
-        context.newline();
-        context.indent();
-
-        List<Statement> statements = block.getStatements();
-        for (int i = 0; i < statements.size(); i++) {
-            if (i > 0) {
-                context.newline();
-            }
-            renderNode(statements.get(i), context);
-        }
-
-        context.newline();
-        context.dedent();
-        context.appendText("}");
-    }
-
-    private void renderIfStmt(IfStmt stmt, RenderContext context) {
-        renderIfHeaderAndBody(stmt, context);
-    }
-
-    private void renderIfHeaderAndBody(IfStmt stmt, RenderContext context) {
-        context.appendText("if");
-        context.space();
-        context.appendText("(");
-        context.appendText(stmt.getCondition().toString());
-        context.appendText(")");
-
-        renderControlBody(stmt.getThenStmt(), context);
-
-        stmt.getElseStmt().ifPresent(elseStmt -> {
-            if (elseStmt instanceof IfStmt nestedIf) {
-                context.newline();
-                context.appendText("else");
-                context.space();
-                renderIfHeaderAndBody(nestedIf, context);
-            } else {
-                context.newline();
-                context.appendText("else");
-                renderControlBody(elseStmt, context);
-            }
-        });
-    }
-
-    private void renderForStmt(ForStmt stmt, RenderContext context) {
-        context.appendText("for");
-        context.space();
-        context.appendText("(");
-
-        renderExpressionList(stmt.getInitialization(), context);
-
-        context.appendText(";");
-
-        stmt.getCompare().ifPresent(compare -> {
-            context.space();
-            context.appendText(compare.toString());
-        });
-
-        context.appendText(";");
-
-        if (!stmt.getUpdate().isEmpty()) {
-            context.space();
-            renderExpressionList(stmt.getUpdate(), context);
-        }
-
-        context.appendText(")");
-
-        renderControlBody(stmt.getBody(), context);
-    }
-
-    private void renderExpressionList(List<? extends Expression> expressions, RenderContext context) {
-        for (int i = 0; i < expressions.size(); i++) {
-            if (i > 0) {
-                context.appendText(", ");
-            }
-            context.appendText(expressions.get(i).toString());
-        }
-    }
-
-    private void renderControlBody(Statement body, RenderContext context) {
-        if (body instanceof BlockStmt blockStmt) {
-            context.space();
-            renderBlockStmt(blockStmt, context);
-            return;
-        }
-
-        context.newline();
-        context.indent();
-        renderNode(body, context);
-        context.dedent();
-    }
-
-    private boolean isPresent(Object value) {
-        if (value == null) {
-            return false;
-        }
-
-        if (value instanceof Optional<?> optional) {
-            return optional.isPresent();
-        }
-
-        if (value instanceof CharSequence chars) {
-            return !chars.isEmpty();
-        }
-
-        if (value instanceof Iterable<?> iterable) {
-            return iterable.iterator().hasNext();
-        }
-
-        Class<?> type = value.getClass();
-        if (type.isArray()) {
-            return Array.getLength(value) > 0;
-        }
-
-        return true;
     }
 
     private String stripQuantifierSuffix(String name) {
