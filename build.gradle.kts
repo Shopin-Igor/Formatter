@@ -19,7 +19,7 @@ dependencies {
     antlr("org.antlr:antlr4:4.13.2")
     implementation("org.antlr:antlr4-runtime:4.13.2")
 
-    implementation("com.github.javaparser:javaparser-core:3.28.0")
+    implementation("com.github.javaparser:javaparser-core:3.27.1")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
