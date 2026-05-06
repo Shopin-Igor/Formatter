@@ -11,6 +11,7 @@ import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.metamodel.PropertyMetaModel;
+import com.github.javaparser.printer.Stringable;
 import org.example.ebnfFormatter.match.AppliedRuleValue;
 import org.example.ebnfFormatter.match.Bindings;
 import org.example.ebnfFormatter.match.BoundValue;
@@ -166,7 +167,51 @@ public final class TemplateRenderer {
             return;
         }
 
-        context.appendText(String.valueOf(value));
+        context.appendText(valueToSource(value));
+    }
+
+    private String valueToSource(Object value) {
+//        if (value instanceof BinaryExpr.Operator operator) {
+//            return operator.asString();
+//        }
+//
+//        if (value instanceof AssignExpr.Operator operator) {
+//            return operator.asString();
+//        }
+//
+//        if (value instanceof UnaryExpr.Operator operator) {
+//            return operator.asString();
+//        }
+//
+//        if (value instanceof PrimitiveType.Primitive primitive) {
+//            return primitive.asString();
+//        }
+
+        if (value instanceof Stringable stringable) {
+            return stringable.asString();
+        }
+
+
+        if (value instanceof Modifier.Keyword keyword) {
+            return keyword.asString();
+        }
+//                DEFAULT("default"),
+//                PUBLIC("public"),
+//                PROTECTED("protected"),
+//                PRIVATE("private"),
+//                ABSTRACT("abstract"),
+//                STATIC("static"),
+//                FINAL("final"),
+//                TRANSIENT("transient"),
+//                VOLATILE("volatile"),
+//                SYNCHRONIZED("synchronized"),
+//                NATIVE("native"),
+//                STRICTFP("strictfp"),
+//                TRANSITIVE("transitive"),
+//                SEALED("sealed"),
+//                NON_SEALED("non-sealed");
+
+        return String.valueOf(value);
     }
 
     private void renderNode(Node node, NestedRuleRenderer nestedRuleRenderer, RenderContext context) {
