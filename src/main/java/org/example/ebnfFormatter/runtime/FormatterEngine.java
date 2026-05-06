@@ -6,6 +6,8 @@ import org.example.ebnfFormatter.match.PatternMatcher;
 import org.example.ebnfFormatter.model.RuleDef;
 import org.example.ebnfFormatter.render.TemplateRenderer;
 
+import java.util.Optional;
+
 public final class FormatterEngine {
     private final RuleRegistry ruleRegistry;
     private final PatternMatcher patternMatcher;
@@ -22,15 +24,30 @@ public final class FormatterEngine {
     }
 
     public String format(Node node, String ruleName) {
-        RuleDef rule = ruleRegistry.require(ruleName);
-        MatchResult match = patternMatcher.match(rule.pattern(), node);
+        return tryRender(ruleName, node)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Node does not match any rule <" + ruleName + ">"
+                ));
+    }
 
-        if (!match.matched()) {
-            throw new IllegalArgumentException(
-                    "Node does not match rule <" + ruleName + ">"
-            );
+    public Optional<String> tryRender(String ruleName, Object value) {
+        for (RuleDef rule : ruleRegistry.requireAll(ruleName)) {
+            MatchResult match = patternMatcher.match(rule, value);
+            if (match.matched()) {
+                return Optional.of(templateRenderer.render(
+                        rule.format(),
+                        match.bindings(),
+                        this::tryRenderNested
+                ));
+            }
         }
+        return Optional.empty();
+    }
 
-        return templateRenderer.render(rule.format(), match.bindings());
+    private Optional<String> tryRenderNested(String ruleName, Object value) {
+        if (!ruleRegistry.contains(ruleName)) {
+            return Optional.empty();
+        }
+        return tryRender(ruleName, value);
     }
 }

@@ -22,8 +22,8 @@ public final class TestFormatterFactory {
         RuleRegistry ruleRegistry = new RuleRegistry();
         ruleRegistry.registerAll(rulesFromDocumentation());
 
-        TypeRegistry typeRegistry = new TypeRegistry();
-        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry);
+        TypeRegistryUniversal typeRegistry = new TypeRegistryUniversal();
+        PatternMatcher patternMatcher = new PatternMatcher(typeRegistry, ruleRegistry);
         TemplateRenderer templateRenderer = new TemplateRenderer();
 
         return new FormatterEngine(ruleRegistry, patternMatcher, templateRenderer);
