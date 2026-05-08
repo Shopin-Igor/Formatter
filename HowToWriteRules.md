@@ -84,7 +84,7 @@ for (PropertyMetaModel property : node.getMetaModel().getAllPropertyMetaModels()
             "metaModel",            // описание модели самой ноды
             "range",                // позиция в исходном файле
             "tokenRange",           // диапазон токенов
-            "parsed",               //  получена ли нода парсером или создана програмно
+            "parsed",               //  получена ли нода парсером или создана программно
             "comment",              // комментарий, прикрепленный к ноде
             "orphanComments",       // комментарий, который был рядом с нодой
             "allContainedComments", // все комментарии в поддереве ноды
@@ -235,7 +235,7 @@ private static void printNonNodeProperties(Node node) {
                 "metaModel",            // описание модели самой ноды
                 "range",                // позиция в исходном файле
                 "tokenRange",           // диапазон токенов
-                "parsed",               //  получена ли нода парсером или создана програмно
+                "parsed",               //  получена ли нода парсером или создана программно
                 "comment",              // комментарий, прикрепленный к ноде
                 "orphanComments",       // комментарий, который был рядом с нодой
                 "allContainedComments", // все комментарии в поддереве ноды
