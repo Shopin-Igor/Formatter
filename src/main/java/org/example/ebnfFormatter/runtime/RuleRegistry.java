@@ -2,15 +2,13 @@ package org.example.ebnfFormatter.runtime;
 
 import org.example.ebnfFormatter.model.RuleDef;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public final class RuleRegistry {
-    private final Map<String, RuleDef> rulesByName = new HashMap<>();
+    private final Map<String, List<RuleDef>> rulesByName = new HashMap<>();
 
     public void register(RuleDef rule) {
-        rulesByName.put(rule.name(), rule);
+        rulesByName.computeIfAbsent(rule.name(), k -> new ArrayList<>()).add(rule);
     }
 
     public void registerAll(Collection<RuleDef> rules) {
@@ -19,16 +17,16 @@ public final class RuleRegistry {
         }
     }
 
-    public RuleDef require(String ruleName) {
-        RuleDef rule = rulesByName.get(ruleName);
-        if (rule == null) {
+    public List<RuleDef> requireAll(String ruleName) {
+        List<RuleDef> rules = rulesByName.get(ruleName);
+        if (rules == null || rules.isEmpty()) {
             throw new IllegalArgumentException("Unknown rule: " + ruleName);
         }
-        return rule;
+        return rules;
     }
 
-    public RuleDef find(String ruleName) {
-        return rulesByName.get(ruleName);
+    public List<RuleDef> findAll(String ruleName) {
+        return rulesByName.getOrDefault(ruleName, List.of());
     }
 
     public boolean contains(String ruleName) {
