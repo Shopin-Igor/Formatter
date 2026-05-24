@@ -104,7 +104,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
         String expected = """
                 if (a == b)
                     return 2 * a;
-                else if ((a & 2) == 2)
+                else if ((a&2)==2)
                     return a + b;
                 else
                     return b;""";
@@ -133,13 +133,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 }
                 """;
 
-        String expected = """
-                public int sum(int a, int b) {
-                    if (a == b) {
-                        return 2 * a;
-                    }
-                    return a + b;
-                }""";
+        String expected = "public int sum(int a, int b) {if(a==b){return 2*a;}return a+b;}";
 
         String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
@@ -153,9 +147,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 }
                 """;
 
-        String expected = """
-                public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {
-                }""";
+        String expected = "public int sum(Parameter a, Parameter b, Parameter c, Parameter d) {}";
 
         String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
@@ -170,7 +162,9 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 }
                 """;
 
-        String expected = "public abstract int sum(Input input)";
+        String expected = """
+                public abstract int sum(Input
+                                                            input)""";
 
         String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);
@@ -210,7 +204,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 """;
 
         String expected = """
-                for (int i = 0; i < 5; ++i) {
+                for (int i=0; i<5; ++i) {
                     sm += i;
                 }""";
 
@@ -230,7 +224,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 """;
 
         String expected = """
-                for (int i = 0; i < 5; ++i)
+                for (int i=0; i<5; ++i)
                     sm += i;""";
 
         String formatted = formatFirstNode(forStmtRules, code, ForStmt.class, "ForStmt");

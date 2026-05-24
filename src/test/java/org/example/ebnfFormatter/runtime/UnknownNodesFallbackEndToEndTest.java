@@ -4,7 +4,6 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.stmt.Statement;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.example.ebnfFormatter.dsl.RuleAstBuilder;
@@ -206,7 +205,7 @@ public class UnknownNodesFallbackEndToEndTest {
                     void run() {
                 %s
                     }
-                }""".formatted(indent(parseStatement(statement).toString(), 8));
+                }""".formatted(indent(statement, 8));
 
         assertThat(formatASTFromRootToLeafs(code)).isEqualTo(expected);
     }
@@ -225,12 +224,6 @@ public class UnknownNodesFallbackEndToEndTest {
 
     private static CompilationUnit parseCompilationUnit(String code) {
         ParseResult<CompilationUnit> result = javaParser.parse(code);
-        return result.getResult()
-                .orElseThrow(() -> new IllegalArgumentException(result.getProblems().toString()));
-    }
-
-    private static Statement parseStatement(String statement) {
-        ParseResult<Statement> result = javaParser.parseStatement(statement);
         return result.getResult()
                 .orElseThrow(() -> new IllegalArgumentException(result.getProblems().toString()));
     }

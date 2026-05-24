@@ -67,7 +67,7 @@ public class FormatterEngineE2ETest {
 
         String actual = engine.format(node, "ifRule");
 
-        assertThat(actual).isEqualTo("if (a > b) return a;");
+        assertThat(actual).isEqualTo("if (a>b) return a;");
     }
 
     @Test
