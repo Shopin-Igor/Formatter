@@ -1,17 +1,11 @@
 package org.example.ebnfFormatter.render;
 
+import com.github.javaparser.JavaToken;
+import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.AssignExpr;
-import com.github.javaparser.ast.expr.BinaryExpr;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.UnaryExpr;
-import com.github.javaparser.ast.stmt.*;
-import com.github.javaparser.ast.type.PrimitiveType;
-import com.github.javaparser.metamodel.PropertyMetaModel;
 import com.github.javaparser.printer.Stringable;
+import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
 import org.example.ebnfFormatter.match.AppliedRuleValue;
 import org.example.ebnfFormatter.match.Bindings;
 import org.example.ebnfFormatter.match.BoundValue;
@@ -96,13 +90,93 @@ public final class TemplateRenderer {
             RenderContext context
     ) {
         List<BoundValue> items = bindings.findValues(join.placeholderName());
+        boolean hasEmptySeparator = isEmptyFormat(join.separator());
 
         for (int i = 0; i < items.size(); i++) {
+            BoundValue item = items.get(i);
             if (i > 0) {
-                renderInto(join.separator(), bindings, nestedRuleRenderer, context);
+                if (hasEmptySeparator) {
+                    appendOriginalGapBetween(items.get(i - 1), item, context);
+                } else {
+                    renderInto(join.separator(), bindings, nestedRuleRenderer, context);
+                }
             }
-            renderBoundValue(join.placeholderName(), items.get(i), nestedRuleRenderer, context);
+            renderBoundValue(join.placeholderName(), item, nestedRuleRenderer, context);
         }
+
+        if (hasEmptySeparator && !items.isEmpty()) {
+            appendOriginalGapAfter(items.getLast(), context);
+        }
+    }
+
+    private boolean isEmptyFormat(FormatAst format) {
+        return switch (format) {
+            case FormatText text -> text.text().isEmpty();
+            case FormatSeq seq -> seq.items().stream().allMatch(this::isEmptyFormat);
+            case FormatGroup group -> isEmptyFormat(group.body());
+            default -> false;
+        };
+    }
+
+    private void appendOriginalGapBetween(BoundValue left, BoundValue right, RenderContext context) {
+        originalGapBetween(left.legacyValue(), right.legacyValue()).ifPresent(context::appendText);
+    }
+
+    private void appendOriginalGapAfter(BoundValue value, RenderContext context) {
+        originalGapAfter(value.legacyValue()).ifPresent(context::appendText);
+    }
+
+    private Optional<String> originalGapBetween(Object left, Object right) {
+        Optional<TokenRange> leftRange = tokenRange(left);
+        Optional<TokenRange> rightRange = tokenRange(right);
+        if (leftRange.isEmpty() || rightRange.isEmpty()) {
+            return Optional.empty();
+        }
+
+        JavaToken end = rightRange.get().getBegin();
+        Optional<JavaToken> current = leftRange.get().getEnd().getNextToken();
+        StringBuilder text = new StringBuilder();
+
+        while (current.isPresent() && current.get() != end) {
+            JavaToken token = current.get();
+            if (!token.getCategory().isWhitespaceOrComment()) {
+                return Optional.empty();
+            }
+            text.append(token.getText());
+            current = token.getNextToken();
+        }
+
+        return current.isPresent() ? Optional.of(text.toString()) : Optional.empty();
+    }
+
+    private Optional<String> originalGapAfter(Object value) {
+        Optional<TokenRange> range = tokenRange(value);
+        if (range.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<JavaToken> current = range.get().getEnd().getNextToken();
+        StringBuilder text = new StringBuilder();
+
+        while (current.isPresent() && current.get().getCategory().isWhitespaceOrComment()) {
+            JavaToken token = current.get();
+            text.append(token.getText());
+            current = token.getNextToken();
+        }
+
+        return Optional.of(text.toString());
+    }
+
+    private Optional<TokenRange> tokenRange(Object value) {
+        if (value instanceof Node node) {
+            return node.getTokenRange();
+        }
+
+        if (value instanceof Optional<?> optional) {
+            return optional.flatMap(this::tokenRange);
+        }
+
+        return Optional.empty();
     }
 
     private void renderBoundValue(
@@ -224,7 +298,16 @@ public final class TemplateRenderer {
             return;
         }
 
-        context.appendText(node.toString());
+        context.appendText(sourceText(node));
+    }
+
+    private String sourceText(Node node) {
+        if (LexicalPreservingPrinter.isAvailableOn(node)) {  // может быть полезно для маштабирования
+            return LexicalPreservingPrinter.print(node);
+        }
+        return node.getTokenRange()
+                .map(TokenRange::toString)
+                .orElseGet(() -> LexicalPreservingPrinter.print(node));
     }
 
     private String stripQuantifierSuffix(String name) {
