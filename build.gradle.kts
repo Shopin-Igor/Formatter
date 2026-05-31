@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("antlr")
+    id("application")
 }
 
 group = "org.example"
@@ -13,6 +14,10 @@ repositories {
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
+}
+
+application {
+    mainClass.set("org.example.Main")
 }
 
 dependencies {
