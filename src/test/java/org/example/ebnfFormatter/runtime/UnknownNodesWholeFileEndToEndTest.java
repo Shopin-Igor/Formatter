@@ -154,9 +154,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Flow {
                     void run() {
-                        while (i < limit) {
-                            i++;
-                        }
+                        while(i<limit){i++;}
                         return ;
                     }
                 }"""
@@ -172,10 +170,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Flow {
                     int run() {
-                        do {
-                            tick();
-                            i++;
-                        } while (i < limit);
+                        do{tick();i++;}while(i<limit);
                         return i;
                     }
                 }"""
@@ -191,14 +186,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Switcher {
                     void run() {
-                        switch(mode) {
-                            case A, B ->
-                                run();
-                            case C ->
-                                stop();
-                            default ->
-                                reset();
-                        }
+                        switch(mode){case A,B->run();case C->stop();default->reset();}
                         done();
                     }
                 }"""
@@ -214,13 +202,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Worker {
                     void run() {
-                        try {
-                            work();
-                        } catch (IllegalArgumentException | IllegalStateException e) {
-                            handle(e);
-                        } finally {
-                            cleanup();
-                        }
+                        try{work();}catch(IllegalArgumentException|IllegalStateException e){handle(e);}finally{cleanup();}
                         done();
                     }
                 }"""
@@ -236,9 +218,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Reader {
                     void run() {
-                        try (Input input = open()) {
-                            read(input);
-                        }
+                        try(Input input=open()){read(input);}
                         closeCount++;
                     }
                 }"""
@@ -254,10 +234,8 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Guarded {
                     void run() {
-                        synchronized (lock) {
-                            work();
-                        }
-                        assert ready : "not ready";
+                        synchronized(lock){work();}
+                        assert ready:"not ready";
                         done();
                     }
                 }"""
@@ -273,9 +251,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Iteration {
                     void run() {
-                        for (String item : items) {
-                            use(item);
-                        }
+                        for(String item:items){use(item);}
                         done();
                     }
                 }"""
@@ -291,8 +267,8 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class LocalStuff {
                     void run() {
-                        Runnable task = () -> work();
-                        java.util.function.Function<String, String> trim = String::trim;
+                        Runnable task=()->work();
+                        java.util.function.Function<String,String> trim=String::trim;
                         task.run();
                     }
                 }"""
@@ -325,14 +301,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Branch {
                     void run() {
-                        if (ready)
-                            while (running) {
-                                tick();
-                            }
-                        else
-                            do {
-                                sleep();
-                            } while (waiting);
+                        if(ready)while(running){tick();}else do{sleep();}while(waiting);
                         done();
                     }
                 }"""
@@ -348,12 +317,7 @@ public class UnknownNodesWholeFileEndToEndTest {
                 """
                 class Mixed {
                     void run() {
-                        for (i = 0; i < limit; i++) switch(i) {
-                            case 0 ->
-                                start();
-                            default ->
-                                tick();
-                        }
+                        for(i=0;i<limit;i++)switch(i){case 0->start();default->tick();}
                         done();
                     }
                 }"""
@@ -375,18 +339,11 @@ public class UnknownNodesWholeFileEndToEndTest {
 
                 class Mixed {
                     void loop() {
-                        while ((line = reader.readLine()) != null) {
-                            process(line);
-                        }
+                        while((line=reader.readLine())!=null){process(line);}
                     }
 
                     void choose() {
-                        switch(mode) {
-                            case A, B ->
-                                run();
-                            default ->
-                                reset();
-                        }
+                        switch(mode){case A,B->run();default->reset();}
                     }
                 }"""
         );

@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ALotOfEndToEndTest {
 
-    private static final String ALL_RULES = """            
+    private static final String ALL_RULES = """
             <CompilationUnit> ::= CompilationUnit(packageDeclaration?=<PackageDeclaration>, imports=[<ImportDeclaration>*], types=[<ClassOrInterfaceDeclaration>*])
               => ifpresent(PackageDeclaration, <PackageDeclaration> nl nl)
                  ifpresent(ImportDeclaration, join(<ImportDeclaration>, nl) nl nl)
@@ -70,7 +70,7 @@ public class ALotOfEndToEndTest {
 
             <ElseStmt> ::= <NestedIf>
               => sp <NestedIf>;
-            
+
             <NestedIf> ::= IfStmt(condition=<CondExpr>, thenStmt=<ThenStmt>, elseStmt?=<ElseStmt>)
               => "if" sp "(" <CondExpr> ")" <ThenStmt>
                  ifpresent(ElseStmt, nl "else" <ElseStmt>);
@@ -189,7 +189,7 @@ public class ALotOfEndToEndTest {
                 """
                 public class MathBox {
                     public static int sum(int a, int b) {
-                        return a + b;
+                        return a+b;
                     }
                 }"""
         );
@@ -223,7 +223,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Branches {
                     int max(int a, int b) {
-                        if (a > b)
+                        if (a>b)
                             return a;
                         else
                             return b;
@@ -241,9 +241,9 @@ public class ALotOfEndToEndTest {
                 """
                 class Branches {
                     int choose(int a, int b) {
-                        if (a > b)
+                        if (a>b)
                             return a;
-                        else if (a == b)
+                        else if (a==b)
                             return 0;
                         else
                             return b;
@@ -261,7 +261,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Branches {
                     int max(int a, int b) {
-                        if (a > b) {
+                        if (a>b) {
                             a++;
                             return a;
                         }
@@ -299,7 +299,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Loop {
                     void run() {
-                        for (i = 0, j = 1; i < 10; i++, j++)
+                        for (i=0, j=1; i<10; i++, j++)
                             step();
                     }
                 }"""
@@ -315,7 +315,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Loop {
                     void run() {
-                        for (i = 0, j = 1;; i++, j++)
+                        for (i=0, j=1;; i++, j++)
                             step();
                     }
                 }"""
@@ -331,7 +331,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Loop {
                     void run() {
-                        for (i = 0; i < 3; i++) {
+                        for (i=0; i<3; i++) {
                             step();
                             step();
                         }
@@ -367,7 +367,7 @@ public class ALotOfEndToEndTest {
                 """
                 class Counter {
                     int run() {
-                        int x = 1;
+                        int x=1;
                         x++;
                         return x;
                     }
@@ -484,8 +484,8 @@ public class ALotOfEndToEndTest {
                 """
                 class Complex {
                     int run(int x) {
-                        if (x > 0)
-                            for (i = 0; i < 3; i++)
+                        if (x>0)
+                            for (i=0; i<3; i++)
                                 tick();
                         else
                             return x;
@@ -503,10 +503,10 @@ public class ALotOfEndToEndTest {
                 """
                 class Complex {
                     int run(int x) {
-                        if (x > 0)
+                        if (x>0)
                             return x;
                         else
-                            for (i = 0; i < 2; i++) {
+                            for (i=0; i<2; i++) {
                                 tick();
                                 tick();
                             }
@@ -524,8 +524,8 @@ public class ALotOfEndToEndTest {
                 """
                 class Scanner {
                     int scan(int limit) {
-                        for (i = 0; i < limit; i++) {
-                            if (i == 2)
+                        for (i=0; i<limit; i++) {
+                            if (i==2)
                                 return i;
                             step();
                         }
@@ -544,8 +544,8 @@ public class ALotOfEndToEndTest {
                 """
                 class NestedLoop {
                     void run() {
-                        for (i = 0; i < 2; i++) {
-                            for (j = 0; j < 2; j++)
+                        for (i=0; i<2; i++) {
+                            for (j=0; j<2; j++)
                                 tick();
                             step();
                         }
@@ -563,8 +563,8 @@ public class ALotOfEndToEndTest {
                 """
                 class BlockFlow {
                     int run(int a) {
-                        if (a > 0) {
-                            for (i = 0; i < a; i++)
+                        if (a>0) {
+                            for (i=0; i<a; i++)
                                 work();
                             return a;
                         }
@@ -600,7 +600,7 @@ public class ALotOfEndToEndTest {
 
                 class Derived {
                     int run(int a) {
-                        if (a > 1)
+                        if (a>1)
                             return a;
                         else
                             return 1;
@@ -622,14 +622,14 @@ public class ALotOfEndToEndTest {
                     }
 
                     int choose(int a, int b) {
-                        if (a > b)
+                        if (a>b)
                             return a;
                         else
                             return b;
                     }
 
                     void spin() {
-                        for (i = 0; i < 3; i++)
+                        for (i=0; i<3; i++)
                             tick();
                     }
                 }"""
@@ -652,9 +652,9 @@ public class ALotOfEndToEndTest {
 
                 class Second {
                     int pick(int a, int b, int c) {
-                        if (a > b)
+                        if (a>b)
                             return a;
-                        else if (b > c)
+                        else if (b>c)
                             return b;
                         else
                             return c;
@@ -683,7 +683,7 @@ public class ALotOfEndToEndTest {
 
                 class Worker {
                     void go() {
-                        for (i = 0; i < 1; i++) {
+                        for (i=0; i<1; i++) {
                             step();
                         }
                     }
@@ -700,16 +700,16 @@ public class ALotOfEndToEndTest {
                 """
                 class Deep {
                     int run(int a, int b) {
-                        if (a > b) {
-                            for (i = 0; i < a; i++) {
-                                if (i == b)
+                        if (a>b) {
+                            for (i=0; i<a; i++) {
+                                if (i==b)
                                     return i;
                                 tick();
                             }
                             return a;
                         }
-                        else if (a == b) {
-                            for (i = 0;; i++)
+                        else if (a==b) {
+                            for (i=0;; i++)
                                 step();
                         }
                         else {
@@ -746,12 +746,10 @@ public class ALotOfEndToEndTest {
                 class Deep {
                     int run(int a, int b) {
                         if (a > b) {
-                            while (i < a) {
-                                if (i == b)
-                                    return i;
-                                tick();
-                                ++i;
-                            }
+                            while (i  < a) {
+                                            if (i == b)
+                                            return i;tick();++i;
+                                        }
                             return a;
                         }
                         else if (a == b) {
