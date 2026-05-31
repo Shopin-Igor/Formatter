@@ -68,7 +68,7 @@ public class LikeReadmeNodeFormattingE2ETest {
                 }
                 """;
 
-        String expected = "public abstract int sum(Input \n                                         input)";
+        String expected = "public abstract int sum(Input \n                                    input)";
 
         MethodDeclaration node = StaticJavaParser.parse(source)
                 .findFirst(MethodDeclaration.class)

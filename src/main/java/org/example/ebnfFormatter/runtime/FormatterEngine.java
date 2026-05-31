@@ -35,8 +35,7 @@ public final class FormatterEngine {
             MatchResult match = patternMatcher.match(rule, value);
             if (match.matched()) {
                 return Optional.of(templateRenderer.render(
-                        rule.format(),
-                        match.bindings(),
+                        match.appliedRule(),
                         this::tryRenderNested
                 ));
             }

@@ -6,6 +6,7 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.printer.Stringable;
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
+import org.example.ebnfFormatter.match.AppliedRule;
 import org.example.ebnfFormatter.match.AppliedRuleValue;
 import org.example.ebnfFormatter.match.Bindings;
 import org.example.ebnfFormatter.match.BoundValue;
@@ -13,7 +14,6 @@ import org.example.ebnfFormatter.match.RawValue;
 import org.example.ebnfFormatter.model.format.*;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -26,39 +26,87 @@ public final class TemplateRenderer {
 
     public String render(FormatAst format, Bindings bindings, NestedRuleRenderer nestedRuleRenderer) {
         RenderContext context = new RenderContext();
-        renderInto(format, bindings, nestedRuleRenderer, context);
+        SourceRenderState sourceState = new SourceRenderState();
+        renderInto(format, bindings, nestedRuleRenderer, context, sourceState);
         return context.result();
+    }
+
+    public String render(AppliedRule appliedRule, NestedRuleRenderer nestedRuleRenderer) {
+        RenderContext context = new RenderContext();
+        SourceRenderState sourceState = new SourceRenderState();
+        renderAppliedRule(appliedRule, nestedRuleRenderer, context, sourceState);
+        return context.result();
+    }
+
+    private void renderAppliedRule(
+            AppliedRule appliedRule,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context,
+            SourceRenderState sourceState
+    ) {
+        sourceState.enter(appliedRule.sourceValue());
+        try {
+            renderInto(
+                    appliedRule.rule().format(),
+                    appliedRule.bindings(),
+                    nestedRuleRenderer,
+                    context,
+                    sourceState
+            );
+        } finally {
+            sourceState.exit(context);
+        }
     }
 
     private void renderInto(
             FormatAst format,
             Bindings bindings,
             NestedRuleRenderer nestedRuleRenderer,
-            RenderContext context
+            RenderContext context,
+            SourceRenderState sourceState
     ) {
         switch (format) {
-            case FormatText text -> context.appendText(text.text());
+            case FormatText text -> renderText(text.text(), context, sourceState);
 
             case FormatPlaceholder placeholder ->
-                    renderPlaceholder(placeholder.name(), bindings, nestedRuleRenderer, context);
+                    renderPlaceholder(placeholder.name(), bindings, nestedRuleRenderer, context, sourceState);
 
             case FormatDirective directive -> renderDirective(directive, context);
 
             case FormatSeq seq -> {
                 for (FormatAst item : seq.items()) {
-                    renderInto(item, bindings, nestedRuleRenderer, context);
+                    renderInto(item, bindings, nestedRuleRenderer, context, sourceState);
                 }
             }
 
-            case FormatGroup group -> renderInto(group.body(), bindings, nestedRuleRenderer, context);
+            case FormatGroup group -> renderInto(group.body(), bindings, nestedRuleRenderer, context, sourceState);
 
             case FormatIfPresent ifPresent -> {
                 if (!bindings.findValues(ifPresent.name()).isEmpty()) {
-                    renderInto(ifPresent.body(), bindings, nestedRuleRenderer, context);
+                    renderInto(ifPresent.body(), bindings, nestedRuleRenderer, context, sourceState);
                 }
             }
 
-            case FormatJoin join -> renderJoin(join, bindings, nestedRuleRenderer, context);
+            case FormatJoin join -> renderJoin(join, bindings, nestedRuleRenderer, context, sourceState);
+        }
+    }
+
+    private void renderText(String text, RenderContext context, SourceRenderState sourceState) {
+        int index = 0;
+        while (index < text.length()) {
+            boolean whitespace = Character.isWhitespace(text.charAt(index));
+            int start = index;
+            while (index < text.length() && Character.isWhitespace(text.charAt(index)) == whitespace) {
+                index++;
+            }
+
+            String part = text.substring(start, index);
+            if (whitespace) {
+                context.appendPendingWhitespace(part);
+            } else {
+                sourceState.beforeLiteral(part, context);
+                context.appendText(part);
+            }
         }
     }
 
@@ -75,11 +123,12 @@ public final class TemplateRenderer {
             String placeholderName,
             Bindings bindings,
             NestedRuleRenderer nestedRuleRenderer,
-            RenderContext context
+            RenderContext context,
+            SourceRenderState sourceState
     ) {
         List<BoundValue> values = bindings.getRequiredValues(placeholderName);
         for (BoundValue value : values) {
-            renderBoundValue(placeholderName, value, nestedRuleRenderer, context);
+            renderBoundValue(placeholderName, value, nestedRuleRenderer, context, sourceState);
         }
     }
 
@@ -87,7 +136,8 @@ public final class TemplateRenderer {
             FormatJoin join,
             Bindings bindings,
             NestedRuleRenderer nestedRuleRenderer,
-            RenderContext context
+            RenderContext context,
+            SourceRenderState sourceState
     ) {
         List<BoundValue> items = bindings.findValues(join.placeholderName());
         boolean hasEmptySeparator = isEmptyFormat(join.separator());
@@ -95,17 +145,54 @@ public final class TemplateRenderer {
         for (int i = 0; i < items.size(); i++) {
             BoundValue item = items.get(i);
             if (i > 0) {
-                if (hasEmptySeparator) {
-                    appendOriginalGapBetween(items.get(i - 1), item, context);
-                } else {
-                    renderInto(join.separator(), bindings, nestedRuleRenderer, context);
-                }
+                appendJoinSeparator(
+                        join,
+                        bindings,
+                        nestedRuleRenderer,
+                        context,
+                        sourceState,
+                        items.get(i - 1),
+                        item,
+                        hasEmptySeparator
+                );
             }
-            renderBoundValue(join.placeholderName(), item, nestedRuleRenderer, context);
+            renderBoundValue(join.placeholderName(), item, nestedRuleRenderer, context, sourceState);
         }
 
         if (hasEmptySeparator && !items.isEmpty()) {
-            appendOriginalGapAfter(items.getLast(), context);
+            appendEmptyJoinGapAfter(items.getLast(), context);
+        }
+    }
+
+    private void appendJoinSeparator(
+            FormatJoin join,
+            Bindings bindings,
+            NestedRuleRenderer nestedRuleRenderer,
+            RenderContext context,
+            SourceRenderState sourceState,
+            BoundValue left,
+            BoundValue right,
+            boolean hasEmptySeparator
+    ) {
+        if (hasEmptySeparator) {
+            appendEmptyJoinGapBetween(left, right, context);
+            return;
+        }
+
+        renderInto(join.separator(), bindings, nestedRuleRenderer, context, sourceState);
+    }
+
+    private void appendEmptyJoinGapBetween(BoundValue left, BoundValue right, RenderContext context) {
+        Optional<OriginalGap> originalGap = OriginalGaps.between(left.legacyValue(), right.legacyValue());
+        if (originalGap.isPresent() && !originalGap.get().hasComment()) {
+            context.appendRawText(originalGap.get().text());
+        }
+    }
+
+    private void appendEmptyJoinGapAfter(BoundValue item, RenderContext context) {
+        Optional<OriginalGap> originalGap = OriginalGaps.after(item.legacyValue());
+        if (originalGap.isPresent() && !originalGap.get().hasComment()) {
+            context.appendRawText(originalGap.get().text());
         }
     }
 
@@ -118,82 +205,19 @@ public final class TemplateRenderer {
         };
     }
 
-    private void appendOriginalGapBetween(BoundValue left, BoundValue right, RenderContext context) {
-        originalGapBetween(left.legacyValue(), right.legacyValue()).ifPresent(context::appendText);
-    }
-
-    private void appendOriginalGapAfter(BoundValue value, RenderContext context) {
-        originalGapAfter(value.legacyValue()).ifPresent(context::appendText);
-    }
-
-    private Optional<String> originalGapBetween(Object left, Object right) {
-        Optional<TokenRange> leftRange = tokenRange(left);
-        Optional<TokenRange> rightRange = tokenRange(right);
-        if (leftRange.isEmpty() || rightRange.isEmpty()) {
-            return Optional.empty();
-        }
-
-        JavaToken end = rightRange.get().getBegin();
-        Optional<JavaToken> current = leftRange.get().getEnd().getNextToken();
-        StringBuilder text = new StringBuilder();
-
-        while (current.isPresent() && current.get() != end) {
-            JavaToken token = current.get();
-            if (!token.getCategory().isWhitespaceOrComment()) {
-                return Optional.empty();
-            }
-            text.append(token.getText());
-            current = token.getNextToken();
-        }
-
-        return current.isPresent() ? Optional.of(text.toString()) : Optional.empty();
-    }
-
-    private Optional<String> originalGapAfter(Object value) {
-        Optional<TokenRange> range = tokenRange(value);
-        if (range.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Optional<JavaToken> current = range.get().getEnd().getNextToken();
-        StringBuilder text = new StringBuilder();
-
-        while (current.isPresent() && current.get().getCategory().isWhitespaceOrComment()) {
-            JavaToken token = current.get();
-            text.append(token.getText());
-            current = token.getNextToken();
-        }
-
-        return Optional.of(text.toString());
-    }
-
-    private Optional<TokenRange> tokenRange(Object value) {
-        if (value instanceof Node node) {
-            return node.getTokenRange();
-        }
-
-        if (value instanceof Optional<?> optional) {
-            return optional.flatMap(this::tokenRange);
-        }
-
-        return Optional.empty();
-    }
-
     private void renderBoundValue(
             String placeholderName,
             BoundValue boundValue,
             NestedRuleRenderer nestedRuleRenderer,
-            RenderContext context
+            RenderContext context,
+            SourceRenderState sourceState
     ) {
+        sourceState.beforeValue(boundValue.legacyValue(), context);
+
         switch (boundValue) {
             case AppliedRuleValue appliedRuleValue ->
-                    renderInto(
-                            appliedRuleValue.appliedRule().rule().format(),
-                            appliedRuleValue.appliedRule().bindings(),
-                            nestedRuleRenderer,
-                            context
-                    );
-            case RawValue rawValue -> renderRawValue(placeholderName, rawValue.value(), nestedRuleRenderer, context);
+                    renderAppliedRule(appliedRuleValue.appliedRule(), nestedRuleRenderer, context, sourceState);
+            case RawValue rawValue -> renderRawValue(placeholderName, rawValue.value(), nestedRuleRenderer, context, sourceState);
         }
     }
 
@@ -201,7 +225,8 @@ public final class TemplateRenderer {
             String placeholderName,
             Object value,
             NestedRuleRenderer nestedRuleRenderer,
-            RenderContext context
+            RenderContext context,
+            SourceRenderState sourceState
     ) {
         if (value == null) {
             return;
@@ -214,7 +239,7 @@ public final class TemplateRenderer {
         }
 
         if (value instanceof Optional<?> optional) {
-            optional.ifPresent(v -> renderRawValue(placeholderName, v, nestedRuleRenderer, context));
+            optional.ifPresent(v -> renderRawValue(placeholderName, v, nestedRuleRenderer, context, sourceState));
             return;
         }
 
@@ -227,7 +252,8 @@ public final class TemplateRenderer {
             Iterator<?> it = iterable.iterator();
             while (it.hasNext()) {
                 Object item = it.next();
-                renderRawValue(placeholderName, item, nestedRuleRenderer, context);
+                sourceState.beforeValue(item, context);
+                renderRawValue(placeholderName, item, nestedRuleRenderer, context, sourceState);
             }
             return;
         }
@@ -236,7 +262,9 @@ public final class TemplateRenderer {
         if (type.isArray()) {
             int length = Array.getLength(value);
             for (int i = 0; i < length; i++) {
-                renderRawValue(placeholderName, Array.get(value, i), nestedRuleRenderer, context);
+                Object item = Array.get(value, i);
+                sourceState.beforeValue(item, context);
+                renderRawValue(placeholderName, item, nestedRuleRenderer, context, sourceState);
             }
             return;
         }
@@ -298,7 +326,106 @@ public final class TemplateRenderer {
             return;
         }
 
-        context.appendText(sourceText(node));
+        appendSourceNode(node, context);
+    }
+
+    private void appendSourceNode(Node node, RenderContext context) {
+        Optional<TokenRange> tokenRange = node.getTokenRange();
+        if (tokenRange.isEmpty()) {
+            context.appendText(sourceText(node));
+            return;
+        }
+
+        TokenRange range = tokenRange.get();
+        int sourceIndent = sourceIndent(range.getBegin());
+        int renderedSourceIndent = context.sourceStartColumn();
+        int renderedInlineIndent = Math.max(0, renderedSourceIndent - context.currentIndentColumns());
+        int sourceIndentToStrip = Math.max(0, sourceIndent - renderedInlineIndent);
+        int[] indentToStrip = {0};
+        JavaToken token = range.getBegin();
+
+        while (true) {
+            appendSourceToken(token, sourceIndentToStrip, indentToStrip, context);
+            if (token == range.getEnd()) {
+                return;
+            }
+
+            Optional<JavaToken> nextToken = token.getNextToken();
+            if (nextToken.isEmpty()) {
+                return;
+            }
+            token = nextToken.get();
+        }
+    }
+
+    private void appendSourceToken(
+            JavaToken token,
+            int sourceIndentToStrip,
+            int[] indentToStrip,
+            RenderContext context
+    ) {
+        if (token.getCategory().isWhitespace()) {
+            context.appendSourceWhitespace(stripSourceIndent(token.getText(), sourceIndentToStrip, indentToStrip));
+            return;
+        }
+
+        indentToStrip[0] = 0;
+        context.appendSourceTokenText(token.getText());
+    }
+
+    private int sourceIndent(JavaToken token) {
+        return token.getRange()
+                .map(range -> Math.max(0, range.begin.column - 1))
+                .orElse(0);
+    }
+
+    private String stripSourceIndent(String text, int sourceIndentToStrip, int[] indentToStrip) {
+        if (sourceIndentToStrip <= 0 || text.isEmpty()) {
+            return text;
+        }
+
+        StringBuilder result = new StringBuilder(text.length());
+        int index = 0;
+        while (index < text.length()) {
+            char ch = text.charAt(index);
+
+            if (indentToStrip[0] > 0) {
+                if (ch == ' ') {
+                    indentToStrip[0]--;
+                    index++;
+                    continue;
+                }
+                if (ch == '\t') {
+                    indentToStrip[0] = Math.max(0, indentToStrip[0] - 4);
+                    index++;
+                    continue;
+                }
+                indentToStrip[0] = 0;
+            }
+
+            if (ch == '\r') {
+                result.append(ch);
+                index++;
+                if (index < text.length() && text.charAt(index) == '\n') {
+                    result.append('\n');
+                    index++;
+                }
+                indentToStrip[0] = sourceIndentToStrip;
+                continue;
+            }
+
+            if (ch == '\n') {
+                result.append(ch);
+                index++;
+                indentToStrip[0] = sourceIndentToStrip;
+                continue;
+            }
+
+            result.append(ch);
+            index++;
+        }
+
+        return result.toString();
     }
 
     private String sourceText(Node node) {
@@ -322,33 +449,4 @@ public final class TemplateRenderer {
         };
     }
 
-    private List<?> toList(Object value) {
-        if (value == null) {
-            return List.of();
-        }
-
-        if (value instanceof List<?> list) {
-            return list;
-        }
-
-        if (value instanceof Iterable<?> iterable) {
-            List<Object> result = new ArrayList<>();
-            for (Object item : iterable) {
-                result.add(item);
-            }
-            return result;
-        }
-
-        Class<?> type = value.getClass();
-        if (type.isArray()) {
-            int length = Array.getLength(value);
-            List<Object> result = new ArrayList<>(length);
-            for (int i = 0; i < length; i++) {
-                result.add(Array.get(value, i));
-            }
-            return result;
-        }
-
-        return List.of(value);
-    }
 }
