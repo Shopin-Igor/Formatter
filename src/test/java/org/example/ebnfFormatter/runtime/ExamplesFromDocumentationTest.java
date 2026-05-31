@@ -162,9 +162,7 @@ String formatted = formatFirstNode(ifStmtRules, code, IfStmt.class, "IfStmt");
                 }
                 """;
 
-        String expected = """
-                public abstract int sum(Input
-                                                            input)""";
+        String expected = "public abstract int sum(Input\n                                        input)";
 
         String formatted = formatFirstNode(methodDeclarationRules, code, MethodDeclaration.class, "MethodDeclaration");
         assertThat(formatted).isEqualTo(expected);

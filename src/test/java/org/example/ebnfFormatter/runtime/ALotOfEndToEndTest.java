@@ -747,9 +747,9 @@ public class ALotOfEndToEndTest {
                     int run(int a, int b) {
                         if (a > b) {
                             while (i  < a) {
-                                            if (i == b)
-                                            return i;tick();++i;
-                                        }
+                                if (i == b)
+                                return i;tick();++i;
+                            }
                             return a;
                         }
                         else if (a == b) {
