@@ -262,8 +262,8 @@ public final class JavaFormatterCli {
     }
 
     private void assertAstPreserved(CompilationUnit originalAst, CompilationUnit formattedAst) {
-        String original = originalAst.toString();
-        String formatted = formattedAst.toString();
+        String original = normalizeLineEndings(originalAst.toString());
+        String formatted = normalizeLineEndings(formattedAst.toString());
         if (!original.equals(formatted)) {
             throw new UnsafeFormatException(
                     "formatted AST differs from original AST; file was left unchanged.",
@@ -271,6 +271,11 @@ public final class JavaFormatterCli {
             );
         }
     }
+
+    private String normalizeLineEndings(String text) {  // в Windows перевод на новую строку == "\r\n", а я вставляю nl == '\n' (в Linux формате), соответственно нужна нормализация
+        return text.replace("\r\n", "\n").replace("\r", "\n");
+    }
+
 
     private String firstAstDifference(String original, String formatted) {
         String[] originalLines = original.split("\\R", -1);
