@@ -253,4 +253,4 @@ ANTLR-классы генерируются Gradle-задачей автомат
 
 ## Связь с пользовательской документацией
 - Гайд по написанию DSL-правил находится в [HowToWriteRules.md](HowToWriteRules.md).
-- Подробное описание архитектуры вынесено находится в: [Contributing.md](Contributing.md).
+- Подробное описание архитектуры вынесено находится в [Contributing.md](Contributing.md).
