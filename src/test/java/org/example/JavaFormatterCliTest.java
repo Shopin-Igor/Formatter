@@ -47,17 +47,46 @@ class JavaFormatterCliTest {
     }
 
     @Test
-    void writeLeavesFileUnchangedWhenFormattedAstWouldChange() throws Exception {
-        Path file = tempDir.resolve("Sample.java");
-        String original = "class Sample{<T> T run(T value){return value;}}\n";
-        Files.writeString(file, original, StandardCharsets.UTF_8);
+    void writePreservesGenericMethodTypeParameters() throws Exception {
+        Path file = tempDir.resolve("GenericMethod.java");
+        Files.writeString(file, "class Sample{<T> T run(T value){return value;}}\n", StandardCharsets.UTF_8);
 
-        CliRun run = runCli("--write", "--explain-skips", file.toString());
+        CliRun run = runCli("--write", file.toString());
 
         assertThat(run.exitCode()).isEqualTo(0);
-        assertThat(Files.readString(file, StandardCharsets.UTF_8)).isEqualTo(original);
-        assertThat(run.out()).contains("skipped " + file.toAbsolutePath().normalize());
-        assertThat(run.out()).contains("first different normalized AST line");
+        assertThat(Files.readString(file, StandardCharsets.UTF_8)).isEqualTo("""
+                class Sample {
+                    <T> T run(T value) {
+                        return value;
+                    }
+                }
+                """);
+        assertThat(run.out()).contains("formatted " + file.toAbsolutePath().normalize());
+        assertThat(run.err()).isEmpty();
+    }
+
+    @Test
+    void writePreservesGenericTypeDeclarationParameters() throws Exception {
+        Path classFile = tempDir.resolve("Box.java");
+        Path interfaceFile = tempDir.resolve("Repository.java");
+        Files.writeString(classFile, "class Box<T>{T value;}\n", StandardCharsets.UTF_8);
+        Files.writeString(interfaceFile, "interface Repository<T>{T get();}\n", StandardCharsets.UTF_8);
+
+        CliRun run = runCli("--write", tempDir.toString());
+
+        assertThat(run.exitCode()).isEqualTo(0);
+        assertThat(Files.readString(classFile, StandardCharsets.UTF_8)).isEqualTo("""
+                class Box<T> {
+                    T value;
+                }
+                """);
+        assertThat(Files.readString(interfaceFile, StandardCharsets.UTF_8)).isEqualTo("""
+                interface Repository<T> {
+                    T get();
+                }
+                """);
+        assertThat(run.out()).contains("formatted " + classFile.toAbsolutePath().normalize());
+        assertThat(run.out()).contains("formatted " + interfaceFile.toAbsolutePath().normalize());
         assertThat(run.err()).isEmpty();
     }
 

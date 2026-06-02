@@ -45,17 +45,19 @@ public final class DefaultFormatterFactory {
             <TypeDeclaration> ::= <ClassOrInterfaceDeclaration>
               => <ClassOrInterfaceDeclaration>;
 
-            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=true, name=<SimpleName>, extendedTypes=[<ExtendedType>*], members=[<BodyDeclaration>*])
+            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=true, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], members=[<BodyDeclaration>*])
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
                  ifpresent(Modifier, join(<Modifier>, "")) "interface" sp <SimpleName>
+                 ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">")
                  ifpresent(ExtendedType, sp "extends" sp join(<ExtendedType>, ", "))
                  sp "{"
                  ifpresent(BodyDeclaration, nl indent join(<BodyDeclaration>, nl nl) nl dedent)
                  "}";
 
-            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=false, name=<SimpleName>, extendedTypes=[<ExtendedType>*], implementedTypes=[<ImplementedType>*], members=[<BodyDeclaration>*])
+            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=false, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], implementedTypes=[<ImplementedType>*], members=[<BodyDeclaration>*])
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
                  ifpresent(Modifier, join(<Modifier>, "")) "class" sp <SimpleName>
+                 ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">")
                  ifpresent(ExtendedType, sp "extends" sp join(<ExtendedType>, ", "))
                  ifpresent(ImplementedType, sp "implements" sp join(<ImplementedType>, ", "))
                  sp "{"
@@ -65,15 +67,19 @@ public final class DefaultFormatterFactory {
             <BodyDeclaration> ::= <MethodDeclaration>
               => <MethodDeclaration>;
 
-            <MethodDeclaration> ::= MethodDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], type=<Type>, name=<SimpleName>, parameters=[<Parameter>*], thrownExceptions=[<ReferenceType>*], body=<Statement>)
+            <MethodDeclaration> ::= MethodDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], typeParameters=[<TypeParameter>*], type=<Type>, name=<SimpleName>, parameters=[<Parameter>*], thrownExceptions=[<ReferenceType>*], body=<Statement>)
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
-                 ifpresent(Modifier, join(<Modifier>, "")) <Type> sp <SimpleName> "("
+                 ifpresent(Modifier, join(<Modifier>, ""))
+                 ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">" sp)
+                 <Type> sp <SimpleName> "("
                  ifpresent(Parameter, join(<Parameter>, ", "))
                  ")" ifpresent(ReferenceType, sp "throws" sp join(<ReferenceType>, ", ")) sp <Statement>;
 
-            <MethodDeclaration> ::= MethodDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], type=<Type>, name=<SimpleName>, parameters=[<Parameter>*], thrownExceptions=[<ReferenceType>*])
+            <MethodDeclaration> ::= MethodDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], typeParameters=[<TypeParameter>*], type=<Type>, name=<SimpleName>, parameters=[<Parameter>*], thrownExceptions=[<ReferenceType>*])
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
-                 ifpresent(Modifier, join(<Modifier>, "")) <Type> sp <SimpleName> "("
+                 ifpresent(Modifier, join(<Modifier>, ""))
+                 ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">" sp)
+                 <Type> sp <SimpleName> "("
                  ifpresent(Parameter, join(<Parameter>, ", "))
                  ")" ifpresent(ReferenceType, sp "throws" sp join(<ReferenceType>, ", ")) ";";
 
