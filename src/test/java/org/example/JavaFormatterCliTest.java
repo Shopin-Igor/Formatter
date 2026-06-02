@@ -91,6 +91,27 @@ class JavaFormatterCliTest {
     }
 
     @Test
+    void writePreservesSealedPermitsClauses() throws Exception {
+        Path interfaceFile = tempDir.resolve("BoundValue.java");
+        Path classFile = tempDir.resolve("Base.java");
+        Files.writeString(interfaceFile, "public sealed interface BoundValue permits RawValue, AppliedRuleValue{}\n", StandardCharsets.UTF_8);
+        Files.writeString(classFile, "sealed class Base<T> permits Child{}\n", StandardCharsets.UTF_8);
+
+        CliRun run = runCli("--write", tempDir.toString());
+
+        assertThat(run.exitCode()).isEqualTo(0);
+        assertThat(Files.readString(interfaceFile, StandardCharsets.UTF_8)).isEqualTo("""
+                public sealed interface BoundValue permits RawValue, AppliedRuleValue {}
+                """);
+        assertThat(Files.readString(classFile, StandardCharsets.UTF_8)).isEqualTo("""
+                sealed class Base<T> permits Child {}
+                """);
+        assertThat(run.out()).contains("formatted " + interfaceFile.toAbsolutePath().normalize());
+        assertThat(run.out()).contains("formatted " + classFile.toAbsolutePath().normalize());
+        assertThat(run.err()).isEmpty();
+    }
+
+    @Test
     void writePreservesAnnotationsAndInterfaces() throws Exception {
         Path file = tempDir.resolve("Repository.java");
         Files.writeString(file, "@Deprecated interface Repository{default int one(){return 1;}}\n", StandardCharsets.UTF_8);

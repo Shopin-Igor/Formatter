@@ -42,24 +42,29 @@ public final class DefaultFormatterFactory {
             <ImplementedType> ::= <ClassOrInterfaceType>
               => <ClassOrInterfaceType>;
 
+            <PermittedType> ::= <ClassOrInterfaceType>
+              => <ClassOrInterfaceType>;
+
             <TypeDeclaration> ::= <ClassOrInterfaceDeclaration>
               => <ClassOrInterfaceDeclaration>;
 
-            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=true, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], members=[<BodyDeclaration>*])
+            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=true, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], permittedTypes=[<PermittedType>*], members=[<BodyDeclaration>*])
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
                  ifpresent(Modifier, join(<Modifier>, "")) "interface" sp <SimpleName>
                  ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">")
                  ifpresent(ExtendedType, sp "extends" sp join(<ExtendedType>, ", "))
+                 ifpresent(PermittedType, sp "permits" sp join(<PermittedType>, ", "))
                  sp "{"
                  ifpresent(BodyDeclaration, nl indent join(<BodyDeclaration>, nl nl) nl dedent)
                  "}";
 
-            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=false, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], implementedTypes=[<ImplementedType>*], members=[<BodyDeclaration>*])
+            <ClassOrInterfaceDeclaration> ::= ClassOrInterfaceDeclaration(annotations=[<AnnotationExpr>*], modifiers=[<Modifier>*], interface=false, name=<SimpleName>, typeParameters=[<TypeParameter>*], extendedTypes=[<ExtendedType>*], implementedTypes=[<ImplementedType>*], permittedTypes=[<PermittedType>*], members=[<BodyDeclaration>*])
               => ifpresent(AnnotationExpr, join(<AnnotationExpr>, nl) nl)
                  ifpresent(Modifier, join(<Modifier>, "")) "class" sp <SimpleName>
                  ifpresent(TypeParameter, "<" join(<TypeParameter>, ", ") ">")
                  ifpresent(ExtendedType, sp "extends" sp join(<ExtendedType>, ", "))
                  ifpresent(ImplementedType, sp "implements" sp join(<ImplementedType>, ", "))
+                 ifpresent(PermittedType, sp "permits" sp join(<PermittedType>, ", "))
                  sp "{"
                  ifpresent(BodyDeclaration, nl indent join(<BodyDeclaration>, nl nl) nl dedent)
                  "}";
