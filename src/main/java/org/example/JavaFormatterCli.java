@@ -324,7 +324,7 @@ public final class JavaFormatterCli {
                 You can pass multiple files or directories after --write/--check.
 
                 Options:
-                  --write    Format .java files in place.
+                  --write          Format .java files in place.
                   --check          Report files that would change without writing them.
                   --explain-skips  Show the first normalized AST difference for skipped files.
                   -h, --help       Show this help.
