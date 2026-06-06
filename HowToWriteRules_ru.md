@@ -1,20 +1,20 @@
-# How to write rules when you do not know the JavaParser AST node name
+# Как писать правила, если не знаешь имя JavaParser AST-ноды
 
-This guide helps you move from Java code to a formatter DSL rule when it is not clear what JavaParser calls the required construct or which fields it has.
+Эта инструкция помогает перейти от Java-кода к DSL-правилу форматтера, когда непонятно, как JavaParser называет нужную конструкцию и какие поля у нее есть.
 
-## Short algorithm
+## Короткий алгоритм
 
-1. Take the smallest possible Java code sample that contains the required construct.
-2. Parse it with JavaParser.
-3. Print the AST tree: node class names and their `.toString()` output.
-4. Find the node that corresponds to the required construct.
-5. Print the properties of this node.
-6. Use the node class name in the DSL pattern.
-7. Use property names as field names in the DSL.
+1. Берём минимальный Java-код с нужной конструкцией.
+2. Распарсиваем его JavaParser-ом.
+3. Печатаем дерево AST: имена классов нод и их `.toString()`.
+4. Находим ноду, которая соответствует нужной конструкции.
+5. Печатаем properties этой ноды.
+6. Используем имя класса ноды в DSL pattern.
+7. Используем имена properties как имена полей в DSL.
 
-## Minimal code for finding the node name
+## Минимальный код для поиска имени ноды
 
-Paste this code:
+Вставляем такой код:
 
 ```java
 JavaParser parser = new JavaParser(
@@ -41,7 +41,7 @@ compilationUnit.findAll(Node.class).forEach(node -> {
 });
 ```
 
-The output will be:
+В выводе будет:
 
 ```text
 CompilationUnit -> class Sample {      void run() {         while (i < limit) {             i++;         }     } } 
@@ -64,15 +64,15 @@ NameExpr -> i
 SimpleName -> i
 ```
 
-So the JavaParser node name for `while` is:
+Значит для `while` имя JavaParser-ноды:
 
 ```text
 WhileStmt
 ```
 
-## How to inspect node fields
+## Как посмотреть поля ноды
 
-Once the node name is found, you need to understand which fields can be used in the DSL. Add this to the previous code (example for `WhileStmt`):
+Когда имя ноды найдено, нужно понять, какие поля можно использовать в DSL. Дописываем к предыдущему коду (пример для WhileStmt):
 
 ```java
 Node node = compilationUnit.findFirst(WhileStmt.class).orElseThrow();
@@ -81,15 +81,15 @@ for (PropertyMetaModel property : node.getMetaModel().getAllPropertyMetaModels()
     String name = property.getName();
 
     if (List.of(
-            "metaModel",            // description of the node model itself
-            "range",                // position in the source file
-            "tokenRange",           // token range
-            "parsed",               // whether the node was produced by the parser or created programmatically
-            "comment",              // comment attached to the node
-            "orphanComments",       // comment that was near the node
-            "allContainedComments", // all comments in the node subtree
-            "childNodes",           // all child nodes without field names
-            "parentNode"            // parent node
+            "metaModel",            // описание модели самой ноды
+            "range",                // позиция в исходном файле
+            "tokenRange",           // диапазон токенов
+            "parsed",               //  получена ли нода парсером или создана программно
+            "comment",              // комментарий, прикрепленный к ноде
+            "orphanComments",       // комментарий, который был рядом с нодой
+            "allContainedComments", // все комментарии в поддереве ноды
+            "childNodes",           // все дети ноды без имен полей
+            "parentNode"            // родительская нода
     ).contains(name)) {
         continue;
     }
@@ -99,7 +99,7 @@ for (PropertyMetaModel property : node.getMetaModel().getAllPropertyMetaModels()
 }
 ```
 
-Output (fields for `WhileStmt`):
+Вывод (поля для `WhileStmt`):
 
 ```text
 body -> {
@@ -108,62 +108,63 @@ body -> {
 condition -> i < limit
 ```
 
-## How to write a DSL rule when you know the node name
 
-If the JavaParser class is called:
+## Как, зная имя ноды, написать DSL-правило
+
+Если JavaParser class называется:
 
 ```text
 WhileStmt
 ```
 
-write this in the DSL pattern:
+то в DSL pattern пишем:
 
 ```ebnf
 WhileStmt(...)
 ```
 
-If the properties are called:
+Если property называется:
 
 ```text
 condition
 body
 ```
 
-write this in the DSL:
+то в DSL пишем:
 
 ```ebnf
 condition=<Expression>, body=<Statement>
 ```
 
-Full example:
+Полный пример:
 
 ```ebnf
 <Statement> ::= WhileStmt(condition=<Expression>, body=<Statement>)
   => "while" sp "(" <Expression> ")" sp <Statement>;
 ```
 
-## Lists and optional fields
+## Списки и optional-поля
 
-If a property contains a list, the DSL uses:
+Если property содержит список, в DSL используется:
 
 ```ebnf
 statements=[<Statement>*]
 ```
 
-Example:
+Пример:
 
 ```ebnf
 <Statement> ::= BlockStmt(statements=[<Statement>*])
   => "{" nl indent join(<Statement>, nl) nl dedent "}";
 ```
 
-If a property may or may not be present, use `?` after the field name:
+Если property может быть, а может отсутствовать, используется `?` у имени поля:
 
 ```ebnf
 elseStmt?=<ElseStmt>
 ```
 
-Example:
+Пример:
 
 ```ebnf
 <Statement> ::= IfStmt(condition=<Expression>, thenStmt=<ThenStmt>, elseStmt?=<ElseStmt>)
@@ -171,28 +172,27 @@ Example:
      ifpresent(ElseStmt, nl "else" <ElseStmt>);
 ```
 
-## Important: if two fields may contain different values, do not give their placeholders the same name
+## Важно: если два поля могут содержать разные значения, не нужно placeholder называть одинаково.
 
-Bad:
+Плохо:
 
 ```ebnf
 <BinaryExpr> ::= BinaryExpr(left=<Expression>, right=<Expression>)
   => <Expression> sp "+" sp <Expression>;
 ```
 
-This rule may conflict in bindings because the left and right expressions are different.
+Такой rule может конфликтовать в bindings, потому что левое и правое выражения разные.
 
-Better:
+Лучше:
 
 ```ebnf
 <BinaryExpr> ::= BinaryExpr(left=<LeftExpr>, right=<RightExpr>)
   => <LeftExpr> sp "+" sp <RightExpr>;
 ```
 
-## If a part of a construct is not a Node
+## Если часть конструкции не Node
 
-Not all JavaParser properties are nodes. For example:
-
+Не все properties JavaParser являются нодами. Например:
 ```text
 Modifier.keyword    -> FINAL
 PrimitiveType.type  -> INT
@@ -201,31 +201,24 @@ AssignExpr.operator -> PLUS
 UnaryExpr.operator  -> PREFIX_INCREMENT
 ```
 
-To understand exactly what is stored in such a field, print not only the value but also the Java class of this value, because the same textual value may mean different things in different JavaParser classes.
-
-For example:
-
+Чтобы понять, что именно лежит в таком поле, нужно печатать не только значение, но и Java-класс этого значения (т. к. одно и то же текстовое значение может означать разные вещи в разных классах JavaParser).
+Например:
 ```text
 BinaryExpr.operator -> PLUS
 AssignExpr.operator -> PLUS
 ```
-
-The same name `PLUS` in different classes:
-
+Одинаковое название PLUS в разных классах
 ```text
 com.github.javaparser.ast.expr.BinaryExpr.Operator
 com.github.javaparser.ast.expr.AssignExpr.Operator
 ```
-
-has different meanings:
-
+Имеют разный смысл
 ```text
 a + b   // BinaryExpr.Operator.PLUS
 a += b  // AssignExpr.Operator.PLUS
 ```
 
-The following set of functions is suitable for determining the names of non-Node constructs:
-
+Для определения названий "не Node конструкций" подойдёт такой набор функций
 ```java
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
@@ -239,15 +232,15 @@ private static void printNonNodeProperties(Node node) {
         String name = property.getName();
 
         if (List.of(
-                "metaModel",            // description of the node model itself
-                "range",                // position in the source file
-                "tokenRange",           // token range
-                "parsed",               // whether the node was produced by the parser or created programmatically
-                "comment",              // comment attached to the node
-                "orphanComments",       // comment that was near the node
-                "allContainedComments", // all comments in the node subtree
-                "childNodes",           // all child nodes without field names
-                "parentNode"            // parent node
+                "metaModel",            // описание модели самой ноды
+                "range",                // позиция в исходном файле
+                "tokenRange",           // диапазон токенов
+                "parsed",               //  получена ли нода парсером или создана программно
+                "comment",              // комментарий, прикрепленный к ноде
+                "orphanComments",       // комментарий, который был рядом с нодой
+                "allContainedComments", // все комментарии в поддереве ноды
+                "childNodes",           // все дети ноды без имен полей
+                "parentNode"            // родительская нода
         ).contains(name)) {
             continue;
         }
@@ -283,7 +276,7 @@ private static void printNonNodeValue(String name, Object value) {
             : value.getClass();
     
     String className = valueClass.getCanonicalName();
-    // className may be unavailable for anonymous, lambda, or local classes
+    // className может не быть у анонимных, лямбда, local классов
     if (className == null) {
         className = valueClass.getName().replace('$', '.');
     }
@@ -296,8 +289,7 @@ private static void printNonNodeValue(String name, Object value) {
 }
 ```
 
-Usage example:
-
+Пример использования:
 ```java
 String code = "public class Sample{public int one(){if (a == b) return 1;}}";
 
@@ -306,16 +298,14 @@ BinaryExpr binaryExpr = compilationUnit.findFirst(BinaryExpr.class).orElseThrow(
 printNonNodeProperties(binaryExpr);
 ```
 
-The output will be:
+Вывод будет таким:
 
 ```text
 operator -> com.github.javaparser.ast.expr.BinaryExpr.Operator.EQUALS = EQUALS
 ```
 
-### Example of writing a rule for such constructs
-
-Determine the name:
-
+### Пример написания правила для таких конструкций
+Определяем название:
 ```java
 import com.github.javaparser.ast.Modifier;
 
@@ -326,33 +316,27 @@ Modifier modifier = compilationUnit.findFirst(Modifier.class).orElseThrow();
 printNonNodeProperties(modifier);                                               // keyword -> com.github.javaparser.ast.Modifier.Keyword.FINAL = FINAL
 ```
 
-In the DSL, this can still be moved into a placeholder:
-
+В DSL это все равно можно вынести в placeholder:
 ```ebnf
-<Modifier> ::= Modifier(keyword=<Keyword>)                 // writes keyword on a separate line
-  => nl indent <Keyword> dedent nl;                        // with one-tab indentation
+<Modifier> ::= Modifier(keyword=<Keyword>)                 // будет писать keyword на отдельной строке
+  => nl indent <Keyword> dedent nl;                        //            с 1 табом отступа
 ```
+# Итог
+## Быстрый шаблон для нового правила
 
-# Summary
-
-## Quick template for a new rule
-
-1. Find the node in the AST:
-
+1. Найти в AST:
 ```text
 SomeNode
 ```
 
-2. Inspect the properties of this node:
-
+2. Посмотреть properties этой ноды:
 ```text
 left     -> a
 operator -> PLUS
 right    -> b
 ```
 
-3. For each property, understand what it contains:
-
+3. Для каждого property понимаем, что там лежит:
 ```java
 public class Example {
     void example(Node node) {
@@ -402,18 +386,14 @@ public class Example {
     }
 }
 ```
-
-4. For example, for `BinaryExpr(a + b)` the output will be:
-
+4. Например для BinaryExpr(a + b) будет:
 ```text
 left -> Node NameExpr = a
 operator -> com.github.javaparser.ast.expr.BinaryExpr.Operator.PLUS = PLUS
 right -> Node NameExpr = b
 ```
-
-5. If a property contains a `Node`, move it into a placeholder. If a property contains a non-Node value, for example an enum for `operator`, `keyword`, or `type`, it can also be moved into a placeholder.
-6. Example rule:
-
+5. Если property содержит Node, выносим его в placeholder. Если property содержит не Node, например enum для operator/keyword/type, его тоже можно вынести в placeholder.
+6. Пример правила:
 ```text
 <SomeRule> ::= SomeNode(left=<LeftExpr>, operator=<Operator>, right=<RightExpr>)
   => <LeftExpr> sp <Operator> sp <RightExpr>;

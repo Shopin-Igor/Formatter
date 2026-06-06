@@ -1,68 +1,72 @@
 # Formatter
 
-Formatter - Java-форматтер, в котором стиль описывается правилами на собственном EBNF-подобном DSL, написанными отдельно. Проект разбирает Java-код в AST через JavaParser, сопоставляет AST-узлы с DSL-правилами и собирает отформатированный Java-код по шаблонам вывода.
+Formatter is a Java formatter where the formatting style is described separately by rules written in a custom EBNF-like DSL. The project parses Java code into an AST using JavaParser, matches AST nodes against DSL rules, and builds formatted Java code from output templates.
 
-Главная идея проекта: реализовать форматтер с одновременно выразительными и лаконичными правилами. Чтобы изменить стиль вывода, не нужно переписывать ядро форматтера - достаточно изменить состав правил.
+The main idea of the project is to implement a formatter with rules that are both expressive and concise. To change the output style, you do not need to rewrite the formatter core; it is enough to change the set of rules.
 
-## Что умеет проект
-- форматирует отдельные `.java` файлы и директории с Java-файлами;
-- поддерживает режим проверки без изменения файлов;
-- запускается через Gradle или как установленный локальный CLI;
-- строит AST Java-кода через JavaParser;
-- разбирает DSL-правила через ANTLR;
-- сопоставляет правила с JavaParser AST и извлекает нужные поля узлов;
-- генерирует отформатированный код через шаблоны с: 
-  - строковыми литералами: `"class"`, `"return"`, `";"` и подобными;
-  - пробелами через `sp`;
-  - переносами строк через `nl`; 
-  - увеличением уровня отступа через `indent`;
-  - уменьшением уровня отступа через `dedent`;
-  - списками через `join(<Item>, separator)`;
-  - условными фрагментами через `ifpresent(Name, ...)`.
-- сохраняет исходный текст неподдержанных фрагментов, поэтому отсутствие отдельного правила для конкретного AST-узла не ломает код;
-- перед записью проверяет безопасность результата: форматированный текст заново парсится, а нормализованное AST сравнивается с исходным.
+## What the project can do
 
-## Почему этот подход удобнее обычных Java-форматтеров
+- formats individual `.java` files and directories containing Java files;
+- supports a check mode that does not modify files;
+- can be run through Gradle or as an installed local CLI;
+- builds the AST of Java code using JavaParser;
+- parses DSL rules using ANTLR;
+- matches rules against the JavaParser AST and extracts the required node fields;
+- generates formatted code using templates with:
+  - string literals such as `"class"`, `"return"`, `";"`, and similar tokens;
+  - spaces via `sp`;
+  - line breaks via `nl`;
+  - indentation level increase via `indent`;
+  - indentation level decrease via `dedent`;
+  - lists via `join(<Item>, separator)`;
+  - conditional fragments via `ifpresent(Name, ...)`.
+- preserves the original text of unsupported fragments, so the absence of a separate rule for a specific AST node does not break the code;
+- checks the safety of the result before writing: the formatted text is parsed again, and the normalized AST is compared with the original one.
 
-Многие популярные Java-formatters решают задачу унификации стиля, но либо почти не позволяют пользователю описывать собственные правила форматирования на уровне структуры языка, либо описывать их настолько сложно, что попросту проще захадкодить собственное фиксированное форматирование через фреймворк `openrewrite`.
- 
-В целом есть **3** основные **проблемы** существующих решений: 
-- **фиксированный или почти фиксированный стиль**;
-- **слишком большое количество разрозненных настроек**;
-- **сложность написания собственных правил для структурного форматирования**. 
+## Why this approach is more convenient than ordinary Java formatters
 
-Существующие форматтеры java code: **google-java-format**, **clang-format**, **Eclipse Java formatter**, **ast-grep** и **Topiary**:
+Many popular Java formatters solve the problem of style unification, but they either give the user almost no ability to describe custom formatting rules at the language-structure level, or make such rules so difficult to describe that it is often easier to hardcode a custom fixed formatter using the `openrewrite` framework.
 
-`google-java-format` хорошо подходит для проектов, где нужно строго следовать `Google Java Style`, но его алгоритм форматирования намеренно не конфигурируется: это сделано ради единого стиля. `palantir-java-format` развивает похожий подход: это современный 120-символьный (max длина строки) formatter на базе `google-java-format`. Такие инструменты удобны, когда команда принимает готовый стиль, но неудобны, если нужно описать собственные правила форматирования.
+In general, existing solutions have **3** main **problems**:
 
-`spring-javaformat` ориентирован на `Spring-style` проекты и хорошо интегрируется с Maven, Gradle, Eclipse и IntelliJ IDEA. Но его конфигурация тоже точечная: например, можно переключить стиль отступов на spaces или указать java-baseline=8, а не описывать собственные правила вывода AST-конструкций.
+- **fixed or almost fixed style**;
+- **too many scattered settings**;
+- **difficulty of writing custom rules for structural formatting**.
 
-`clang-format` даёт большое количество параметров через .clang-format, поддерживает готовые стили и YAML-конфигурацию. Это мощный подход, но он основан на настройке большого набора опций (чтобы настроить которые, нужно прочитать > 70 страниц документации), а не на написании отдельных правил вида pattern => format expression для конкретных синтаксических конструкций Java.
+Existing Java code formatters include **google-java-format**, **clang-format**, **Eclipse Java formatter**, **ast-grep**, and **Topiary**:
 
-`Eclipse Java formatter` тоже позволяет создавать и редактировать профили форматирования. Это удобно для настройки стиля в IDE, но пользователь работает с профилями и параметрами, а не с компактным DSL-языком, который напрямую описывает структуру AST-узла и порядок вывода его частей.
+`google-java-format` works well for projects that need to strictly follow `Google Java Style`, but its formatting algorithm is intentionally non-configurable: this is done to preserve a single consistent style. `palantir-java-format` follows a similar approach: it is a modern 120-character-line formatter based on `google-java-format`. These tools are convenient when a team accepts a ready-made style, but inconvenient when the team needs to describe its own formatting rules.
 
-`ast-grep` и `Topiary` ближе к структурному подходу, потому что работают вокруг AST и правил. Однако `ast-grep` сложный язык написания правил (сложно собрать работающий форматтер), а `Topiary` - универсальный formatter в экосистеме `Tree-sitter`, ориентированный на авторов formatter-ов для разных языков, и там форматтер для Java находится довольно в зародышевом состоянии (очень мало, что поддерживается).
+`spring-javaformat` is aimed at `Spring-style` projects and integrates well with Maven, Gradle, Eclipse, and IntelliJ IDEA. However, its configuration is also limited to specific options: for example, you can switch the indentation style to spaces or specify `java-baseline=8`, but you cannot describe your own output rules for AST constructs.
 
-Главное отличие `Formatter` - форматирование задаётся декларативно. Правило описывает:
-- какой JavaParser AST-узел нужно найти;
-- какие поля этого узла нужно извлечь;
-- какие вложенные правила применить;
-- в каком порядке собрать итоговый Java-код;
-- где поставить пробелы, переносы строк и отступы.
+`clang-format` provides many parameters through `.clang-format`, supports predefined styles, and uses YAML configuration. This is a powerful approach, but it is based on configuring a large set of options (to configure them properly, you need to read more than 70 pages of documentation), rather than writing separate rules of the form `pattern => format expression` for specific Java syntax constructs.
 
-**Formatter удобен, потому что**:
-- правила форматирования отделены от кода программы;
-- стиль можно развивать постепенно; 
-- неподдержанные фрагменты Java-кода сохраняются через fallback-механизм; 
-- правила читаются как описание структуры Java-кода; 
-- вложенное форматирование выражается естественно через ссылки на другие правила; 
-- списки и optional-элементы описываются прямо в DSL; 
-- один и тот же движок можно использовать с разными наборами правил.
+`Eclipse Java formatter` also allows users to create and edit formatting profiles. This is convenient for configuring style inside an IDE, but the user works with profiles and parameters, not with a compact DSL that directly describes the structure of an AST node and the order in which its parts should be printed.
 
-**Итог**: Formatter можно использовать не только как инструмент автоматического форматирования, но и как платформа для быстрого описания, проверки и развития собственных правил Java-форматирования. Вместо изменения Java-кода formatter-а достаточно изменить DSL-правило: это делает подход гибким, расширяемым и более понятным для экспериментов с разными стилями форматирования.
+`ast-grep` and `Topiary` are closer to the structural approach because they work around ASTs and rules. However, `ast-grep` has a complex rule language, which makes it difficult to build a working formatter, while `Topiary` is a universal formatter in the `Tree-sitter` ecosystem aimed at formatter authors for different languages; its Java formatter is still at a rather early stage and supports very little.
 
+The main difference of `Formatter` is that formatting is defined declaratively. A rule describes:
 
-**Ссылки на рассмотренные аналоги**:
+- which JavaParser AST node should be matched;
+- which fields of this node should be extracted;
+- which nested rules should be applied;
+- in what order the final Java code should be assembled;
+- where spaces, line breaks, and indentation should be placed.
+
+**Formatter is convenient because**:
+
+- formatting rules are separated from the program code;
+- the style can be evolved gradually;
+- unsupported Java code fragments are preserved through a fallback mechanism;
+- rules read like a description of Java code structure;
+- nested formatting is expressed naturally through references to other rules;
+- lists and optional elements are described directly in the DSL;
+- the same engine can be used with different rule sets.
+
+**Conclusion**: Formatter can be used not only as an automatic formatting tool, but also as a platform for quickly describing, checking, and evolving custom Java formatting rules. Instead of changing the formatter's Java code, it is enough to change a DSL rule. This makes the approach flexible, extensible, and easier to understand when experimenting with different formatting styles.
+
+**Links to the reviewed alternatives**:
+
 - [google-java-format](https://github.com/google/google-java-format);
 - [palantir-java-format](https://github.com/palantir/palantir-java-format);
 - [spring-javaformat](https://github.com/spring-io/spring-javaformat);
@@ -71,21 +75,19 @@ Formatter - Java-форматтер, в котором стиль описыва
 - [ast-grep](https://ast-grep.github.io/);
 - [Topiary](https://topiary.tweag.io/).
 
+## Project status
 
+The main implementation is complete: the project has a working CLI, a DSL rule parser, an internal rule model, AST matching, result rendering, fallback for unsupported fragments, and a safety check before writing.
 
-## Статус проекта
+The base rule set is located in `DefaultFormatterFactory` (it can be customized using the guide in [HowToWriteRules.md](HowToWriteRules.md)). It covers the main Java file formatting pipeline: `package`, `import`, `class`, `interface`, methods, blocks, `if/else`, `for`, `return`, and expression statements.
 
-Основная реализация завершена: в проекте есть рабочий CLI, парсер DSL-правил, внутренняя модель правил, сопоставление с AST, рендеринг результата, fallback для неподдержанных фрагментов и проверка безопасности перед записью.
-
-Базовый набор правил находится в `DefaultFormatterFactory` (его можно настраивать под себя по гайду из [HowToWriteRules.md](HowToWriteRules.md)). Он покрывает основной пайплайн форматирования Java-файлов: `package`, `import`, `class`, `interface`, методы, блоки, `if/else`, `for`, `return` и expression statements.
-
-## Требования
+## Requirements
 
 - JDK 25;
 - Git;
-- Gradle Wrapper из репозитория: `./gradlew` или `gradlew.bat`.
+- the Gradle Wrapper from the repository: `./gradlew` or `gradlew.bat`.
 
-## Быстрый старт
+## Quick start
 
 ```bash
 git clone https://github.com/Shopin-Igor/Formatter.git
@@ -93,57 +95,57 @@ cd Formatter
 ./gradlew test
 ```
 
-## Запуск через Gradle
+## Running through Gradle
 
-Проверить, какие файлы были бы отформатированы:
+Check which files would be formatted:
 
 ```bash
 ./gradlew run --args="--check path/to/file-or-dir"
 ```
 
-Отформатировать файлы на месте:
+Format files in place:
 
 ```bash
 ./gradlew run --args="--write path/to/file-or-dir"
 ```
 
-Показать подробности для файлов, которые были пропущены проверкой безопасности:
+Show details for files skipped by the safety check:
 
 ```bash
 ./gradlew run --args="--write --explain-skips path/to/file-or-dir"
 ```
 
-`--explain-skips` нужен для отладки правил. Обычный `skipped ...` сообщает причину пропуска, а с этим флагом formatter дополнительно показывает первую строку, где нормализованное AST после форматирования отличается от исходного AST. В выводе будут показаны:
+`--explain-skips` is useful for debugging rules. A regular `skipped ...` message reports the reason for skipping, while this flag makes the formatter additionally show the first line where the normalized AST after formatting differs from the original AST. The output shows:
 
-- номер первой отличающейся строки нормализованного AST;
-- как эта строка выглядела в исходном дереве;
-- как она стала выглядеть после форматирования.
+- the number of the first differing line in the normalized AST;
+- how this line looked in the original tree;
+- how it looked after formatting.
 
-Это помогает быстро понять, какое правило изменило не только пробелы и переносы строк, но и структуру Java-кода. В таком случае файл остаётся без изменений.
+This helps quickly understand which rule changed not only spaces and line breaks, but also the structure of the Java code. In this case, the file remains unchanged.
 
-Можно передавать несколько файлов или директорий:
+You can pass several files or directories:
 
 ```bash
 ./gradlew run --args="--check src/main/java src/test/java"
 ```
 
-При обходе директорий formatter пропускает служебные директории: `.git`, `.gradle`, `build`, `target`, `out`.
+When traversing directories, the formatter skips service directories: `.git`, `.gradle`, `build`, `target`, and `out`.
 
-## Установка локального CLI
+## Installing a local CLI
 
-Собрать локальный исполняемый скрипт:
+Build a local executable script:
 
 ```bash
 ./gradlew installDist
 ```
 
-После этого на Linux/macOS будет доступен скрипт:
+After that, the following script will be available on Linux/macOS:
 
 ```bash
 ./build/install/core_of_my_project/bin/core_of_my_project
 ```
 
-Примеры запуска:
+Run examples:
 
 ```bash
 ./build/install/core_of_my_project/bin/core_of_my_project --check /home/igor2/IdeaProjects/spring-hw-08-Shopin-Igor
@@ -151,106 +153,104 @@ cd Formatter
 ./build/install/core_of_my_project/bin/core_of_my_project --write --explain-skips /home/igor2/IdeaProjects/spring-hw-08-Shopin-Igor
 ```
 
-На Windows аналогичный скрипт находится в той же директории и имеет расширение `.bat`.
+On Windows, the equivalent script is located in the same directory and has the `.bat` extension.
 
-## CLI-опции
+## CLI options
 
-| Опция             | Что делает                                                                                      |
-|-------------------|-------------------------------------------------------------------------------------------------|
-| `--write`         | форматирует `.java` файлы в указанной директории                                                |
-| `--check`         | показывает файлы, которые formatter изменил бы, но не изменяет результат в указанной директории |
-| `--explain-skips` | добавляет диагностический вывод для файлов, пропущенных проверкой безопасности                  |
-| `-h`, `--help`    | показывает справку                                                                              |
+| Option            | What it does                                                                                     |
+|-------------------|--------------------------------------------------------------------------------------------------|
+| `--write`         | formats `.java` files in the specified directory                                                 |
+| `--check`         | shows the files that the formatter would change, but does not modify the files in the directory  |
+| `--explain-skips` | adds diagnostic output for files skipped by the safety check                                     |
+| `-h`, `--help`    | shows help                                                                                       |
 
-`--check` - это режим просмотра. Если formatter пишет `would format ...`, это означает: файл отличается от результата форматирования, но сам файл не был изменён. Ненулевой код возврата появляется при реальных ошибках: например, путь не найден, исходный файл не парсится или во время обработки произошло исключение.
+`--check` is a preview mode. If the formatter writes `would format ...`, it means that the file differs from the formatting result, but the file itself has not been changed. A non-zero exit code appears only on real errors: for example, when the path is not found, the source file cannot be parsed, or an exception occurs during processing.
 
+## How formatting works
 
+In brief:
 
-## Как устроено форматирование
+1. The CLI collects a list of `.java` files.
+2. JavaParser builds an AST for each file.
+3. `FormatterEngine` starts formatting from the root rule.
+4. `PatternMatcher` searches for a suitable DSL rule for the current AST node.
+5. The matched AST parts are saved in `Bindings`.
+6. `TemplateRenderer` assembles text according to the output template.
+7. For nested nodes, the formatter recursively repeats the same process.
+8. If there is no separate rule for a fragment, its original tokens are passed to the result.
+9. The final text is parsed again, and then the normalized AST is compared with the original one.
 
-Коротко:
+A detailed architecture description is provided in a separate file: [Contributing.md](Contributing.md).
 
-1. CLI собирает список `.java` файлов.
-2. JavaParser строит AST для каждого файла.
-3. `FormatterEngine` запускает форматирование от корневого правила.
-4. `PatternMatcher` ищет подходящее DSL-правило для текущего AST-узла.
-5. Найденные части AST сохраняются в `Bindings`.
-6. `TemplateRenderer` собирает текст по шаблону вывода.
-7. Для вложенных узлов formatter рекурсивно повторяет тот же процесс.
-8. Если для фрагмента нет отдельного правила, в результат передаются его исходные токены.
-9. Итоговый текст снова парсится, после чего нормализованное AST сравнивается с исходным.
+## How to write rules
 
-Подробное описание архитектуры вынесено в отдельный файл: [Contributing.md](Contributing.md).
+**A detailed algorithm for writing rules, choosing JavaParser node names, and finding their properties is provided in a separate guide: [HowToWriteRules.md](HowToWriteRules.md).**
 
-## Как писать правила
-**Подробный алгоритм написания правил, подбора имён JavaParser-нод и поиска их properties вынесен в отдельный гайд: [HowToWriteRules.md](HowToWriteRules.md).**
+***Briefly:***
 
-***Кратко ниже:***
+A rule consists of two parts: a pattern for the JavaParser AST and an output template.
 
-Правило состоит из двух частей: паттерна для JavaParser AST и шаблона вывода.
-
-Реальный пример правила для `return`:
+A real example of a rule for `return`:
 
 ```ebnf
 <Statement> ::= ReturnStmt(expression?=<Expression>)
   => "return" ifpresent(Expression, sp <Expression>) ";";
 ```
 
-Что здесь происходит:
+What happens here:
 
-- `ReturnStmt(...)` сопоставляется с JavaParser-узлом `ReturnStmt`;
-- `expression?=<Expression>` извлекает необязательное выражение после `return`;
-- `"return"` и `";"` выводятся как обычный текст;
-- `ifpresent(Expression, sp <Expression>)` добавляет пробел и выражение только тогда, когда выражение действительно есть.
+- `ReturnStmt(...)` is matched against the JavaParser `ReturnStmt` node;
+- `expression?=<Expression>` extracts the optional expression after `return`;
+- `"return"` and `";"` are printed as regular text;
+- `ifpresent(Expression, sp <Expression>)` adds a space and the expression only when the expression actually exists.
 
-Например, правило корректно выводит оба варианта:
+For example, the rule correctly prints both variants:
 
 ```java
 return;
 return value;
 ```
 
-Ещё один пример - блок statement-ов:
+Another example is a block of statements:
 
 ```ebnf
 <Statement> ::= BlockStmt(statements=[<Statement>*])
   => "{" nl indent join(<Statement>, nl) nl dedent "}";
 ```
 
-Здесь `join(<Statement>, nl)` выводит список вложенных statement-ов через перенос строки, а `indent`/`dedent` управляют уровнем отступа.
+Here, `join(<Statement>, nl)` prints a list of nested statements separated by line breaks, while `indent`/`dedent` control the indentation level.
 
-
-
-## Структура проекта
+## Project structure
 
 ```text
-src/main/antlr/ebnf.g4                          # грамматика DSL
-src/main/java/org/example/Main.java             # точка входа CLI
-src/main/java/org/example/JavaFormatterCli.java # обработка CLI-аргументов и файлов
-src/main/java/org/example/ebnfFormatter/dsl     # построение модели правил из parse tree DSL
-src/main/java/org/example/ebnfFormatter/match   # сопоставление правил с JavaParser AST
-src/main/java/org/example/ebnfFormatter/model   # внутренняя модель правил и форматных выражений
-src/main/java/org/example/ebnfFormatter/render  # рендеринг итогового Java-кода
-src/main/java/org/example/ebnfFormatter/runtime # сборка formatter engine, registry и стандартные правила
-src/test/java                                   # тесты
+src/main/antlr/ebnf.g4                          # DSL grammar
+src/main/java/org/example/Main.java             # CLI entry point
+src/main/java/org/example/JavaFormatterCli.java # CLI argument and file handling
+src/main/java/org/example/ebnfFormatter/dsl     # building the rule model from the DSL parse tree
+src/main/java/org/example/ebnfFormatter/match   # matching rules against the JavaParser AST
+src/main/java/org/example/ebnfFormatter/model   # internal model of rules and formatting expressions
+src/main/java/org/example/ebnfFormatter/render  # rendering the final Java code
+src/main/java/org/example/ebnfFormatter/runtime # building the formatter engine, registry, and default rules
+src/test/java                                   # tests
 ```
 
-## Проверка качества
+## Quality checks
 
-Запуск тестов:
+Run tests:
 
 ```bash
 ./gradlew test
 ```
 
-Полная сборка:
+Full build:
 
 ```bash
 ./gradlew build
 ```
 
-ANTLR-классы генерируются Gradle-задачей автоматически во время сборки.
+ANTLR classes are generated automatically by a Gradle task during the build.
 
-## Связь с пользовательской документацией
-- Гайд по написанию DSL-правил находится в [HowToWriteRules.md](HowToWriteRules.md).
-- Подробное описание архитектуры вынесено находится в [Contributing.md](Contributing.md).
+## Related user documentation
+
+- The guide for writing DSL rules is located in [HowToWriteRules.md](HowToWriteRules.md).
+- The detailed architecture description is provided in [Contributing.md](Contributing.md).

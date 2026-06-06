@@ -1,123 +1,122 @@
-# Архитектура Formatter
+# Formatter Architecture
 
+Formatter is built as a pipeline: the input **Java code and DSL rules are parsed** into structural models, then the formatter core **matches the JavaParser AST against rules** and **builds the final text**.
 
-Formatter построен как пайплайн: исходный **Java-код и DSL-правила разбираются** в структурные модели, затем ядро форматтера **сопоставляет JavaParser AST с правилами** и **собирает итоговый текст**.
+![Formatter Architecture](docs/images/formatter-architecture.png)
 
-![Архитектура Formatter](docs/images/formatter-architecture.png)
+## General idea
 
-## Общая идея
+The project separates **two** tasks:
 
-Проект разделяет **две** задачи:
+1. **Input parsing** - Java code is converted into a JavaParser AST, and DSL rules are converted into the internal `RuleDef` model.
+2. **Formatting** - AST nodes are matched against rules, matched AST parts are stored in `Bindings`, and then `TemplateRenderer` builds the text according to the output template.
 
-1. **Разбор входных данных** - Java-код превращается в JavaParser AST, а DSL-правила превращаются во внутреннюю модель `RuleDef`.
-2. **Форматирование** - AST-узлы сопоставляются с правилами, найденные части AST сохраняются в `Bindings`, после чего `TemplateRenderer` собирает текст по шаблону вывода.
+This approach makes it possible to change the formatting style through rules without rewriting the main formatter core.
 
-Такой подход позволяет менять стиль форматирования через правила, не переписывая основное ядро форматтера.
+## Main data flow
 
-## Основной поток данных
+1. The user passes a `.java` file or a directory containing such files to the formatter.
+2. `JavaFormatterCli` reads the file and passes the source text to JavaParser.
+3. JavaParser builds a `CompilationUnit` - the root AST node of a Java file.
+4. DSL rules are parsed by the ANTLR parser.
+5. `RuleAstBuilder` converts the DSL parse tree into a list of `RuleDef` objects.
+6. `RuleRegistry` stores rules and returns them by name, for example `<CompilationUnit>`, `<Statement>`, `<Expression>`.
+7. `FormatterEngine` starts formatting from the root rule.
+8. `PatternMatcher` selects a suitable rule for the current AST node.
+9. If a rule is found, the matched AST parts are stored in `Bindings`.
+10. `TemplateRenderer` builds the text according to the format part of the rule.
+11. For nested nodes, `FormatterEngine` is called recursively.
+12. If a node has no separate rule, the renderer preserves the original tokens of this node and passes them to the result without reformatting the fragment.
+13. The generated text is parsed again by JavaParser.
+14. If the formatted text cannot be parsed, or if its normalized AST differs from the original AST, the file is not overwritten.
+15. If the check passes successfully, the result is written to the file in `--write` mode or only shown as a potential change in `--check` mode.
 
-1. Пользователь передаёт formatter-у `.java` файл или директорию, в которой есть такие файлы.
-2. `JavaFormatterCli` читает файл и передаёт исходный текст в JavaParser.
-3. JavaParser строит `CompilationUnit` - корневой AST-узел Java-файла.
-4. DSL-правила разбираются ANTLR-парсером.
-5. `RuleAstBuilder` преобразует parse tree DSL в список `RuleDef`.
-6. `RuleRegistry` хранит правила и отдаёт их по имени, например `<CompilationUnit>`, `<Statement>`, `<Expression>`.
-7. `FormatterEngine` запускает форматирование от корневого правила.
-8. `PatternMatcher` выбирает подходящее правило для текущего AST-узла.
-9. Если правило найдено, найденные части AST сохраняются в `Bindings`.
-10. `TemplateRenderer` собирает текст по форматной части правила.
-11. Для вложенных узлов `FormatterEngine` вызывается рекурсивно.
-12. Если для узла нет отдельного правила, renderer сохраняет исходные токены этого узла и передаёт их в результат без переформатирования фрагмента.
-13. Готовый текст заново парсится JavaParser-ом.
-14. Если форматированный текст не парсится или его нормализованное AST отличается от исходного AST, файл не перезаписывается.
-15. Если проверка прошла успешно, результат записывается в файл в режиме `--write` или только показывается как потенциальное изменение в режиме `--check`.
+## Components
 
-## Компоненты
+| Component               | Role                                                                                                                               |
+|-------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `JavaFormatterCli`      | Handles CLI arguments, collects `.java` files, runs parsing, formatting, and safe result writing.                                  |
+| `JavaParser`            | Builds the AST of the source Java code.                                                                                            |
+| `ANTLR`                 | Parses DSL formatting rules by generating a lexer and parser from the language description.                                         |
+| `RuleAstBuilder`        | Converts the DSL parse tree into the object model of rules, `RuleDef`.                                                             |
+| `RuleDef`               | Internal representation of one rule: the rule name, the pattern part, and the format part.                                         |
+| `RuleRegistry`          | Rule storage. Allows the formatter to find all rules with the required name.                                                       |
+| `TypeRegistryUniversal` | Maps DSL type names to JavaParser classes and reads AST node properties through getters.                                            |
+| `PatternMatcher`        | Matches an AST node against the pattern part of a rule.                                                                            |
+| `Bindings`              | Stores AST parts found while matching a rule.                                                                                      |
+| `TemplateRenderer`      | Builds the final text according to the format part of a rule.                                                                      |
+| `FormatterEngine`       | Coordinates the process: selects rules, runs the matcher, calls the renderer, and recursively formats nested nodes.                 |
 
-| Компонент               | Роль                                                                                                                  |
-|-------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| `JavaFormatterCli`      | Обрабатывает CLI-аргументы, собирает `.java` файлы, запускает парсинг, форматирование и безопасную запись результата. |
-| `JavaParser`            | Строит AST исходного Java-кода.                                                                                       |
-| `ANTLR`                 | Разбирает DSL-правила форматирования, генерируя лексер и парсер по описанию языка.                                    |
-| `RuleAstBuilder`        | Преобразует parse tree DSL в объектную модель правил `RuleDef`.                                                       |
-| `RuleDef`               | Внутреннее представление одного правила: имя правила, pattern-часть и format-часть.                                   |
-| `RuleRegistry`          | Хранилище правил. Позволяет найти все правила с нужным именем.                                                        |
-| `TypeRegistryUniversal` | Связывает DSL-имена типов с JavaParser-классами и читает properties AST-узлов через getter-ы.                         |
-| `PatternMatcher`        | Сопоставляет AST-узел с pattern-частью правила.                                                                       |
-| `Bindings`              | Хранит части AST, найденные при сопоставлении правила.                                                                |
-| `TemplateRenderer`      | Собирает итоговый текст по format-части правила.                                                                      |
-| `FormatterEngine`       | Координирует процесс: выбирает правила, запускает matcher, вызывает renderer и рекурсивно форматирует вложенные узлы. |
+## Java code parsing
 
-## Разбор Java-кода
+The input is a source `.java` file. JavaParser builds an AST where each language construct is represented by a separate node: `CompilationUnit`, `ClassOrInterfaceDeclaration`, `MethodDeclaration`, `BlockStmt`, `IfStmt`, `ForStmt`, `ReturnStmt`, and so on.
 
-На вход поступает исходный `.java` файл. JavaParser строит AST, где каждая конструкция языка представлена отдельным узлом: `CompilationUnit`, `ClassOrInterfaceDeclaration`, `MethodDeclaration`, `BlockStmt`, `IfStmt`, `ForStmt`, `ReturnStmt` и так далее.
+Formatter works specifically with the Java code AST, not with a sequence of characters. Therefore, a rule can refer not directly to text tokens, but to structural fields of a JavaParser node class, for example `name`, `type`, `parameters`, `body`, `condition`, `thenStmt`, `elseStmt`, `statements`, and so on.
 
-Formatter работает именно с AST Java code, а не с последовательностью символов. Поэтому правило может обращаться не к текстовым токенам напрямую, а к структурным полям класса узла в JavaParser (например, `name`, `type`, `parameters`, `body`, `condition`, `thenStmt`, `elseStmt`, `statements` и так далее).
+## DSL rule parsing
 
-## Разбор DSL-правил
-
-Правила имеют общий вид:
+Rules have the following general form:
 
 ```ebnf
 <RuleName> ::= Pattern
   => FormatExpression;
 ```
 
-Пример:
+Example:
 
 ```ebnf
 <Statement> ::= ReturnStmt(expression?=<Expression>)
   => "return" ifpresent(Expression, sp <Expression>) ";";
 ```
 
-ANTLR строит parse tree для такого правила, а `RuleAstBuilder` превращает его во внутреннюю модель `RuleDef`. После этого правило попадает в `RuleRegistry` и может использоваться formatter-ом.
+ANTLR builds a parse tree for such a rule, and `RuleAstBuilder` converts it into the internal `RuleDef` model. After that, the rule is placed into `RuleRegistry` and can be used by the formatter.
 
-## Сопоставление правила с AST
+## Matching a rule against the AST
 
-`PatternMatcher` получает текущий AST-узел и набор правил с нужным именем. Он проверяет правила по очереди:
+`PatternMatcher` receives the current AST node and a set of rules with the required name. It checks the rules one by one:
 
-1. совпадает ли тип AST-узла с типом в pattern-части;
-2. есть ли у узла необходимые поля;
-3. совпадают ли значения простых свойств;
-4. можно ли сопоставить вложенные узлы с вложенными правилами;
-5. можно ли сопоставить списки, optional-поля и повторяющиеся элементы.
+1. whether the AST node type matches the type in the pattern part;
+2. whether the node has the required fields;
+3. whether simple property values match;
+4. whether nested nodes can be matched against nested rules;
+5. whether lists, optional fields, and repeated elements can be matched.
 
-Если правило подходит, matcher возвращает `MatchResult`, внутри которого лежат `Bindings` - найденные значения, которые потом будут использованы renderer-ом.
+If the rule fits, the matcher returns `MatchResult`, which contains `Bindings` - the matched values that will later be used by the renderer.
 
-## Рендеринг результата
+## Rendering the result
 
-`TemplateRenderer` читает format-часть правила и последовательно добавляет в результат:
+`TemplateRenderer` reads the format part of the rule and sequentially adds the following to the result:
 
-- строковые литералы: `"class"`, `"return"`, `";"`;
-- пробелы через `sp`;
-- переносы строк через `nl`;
-- увеличение отступа через `indent`;
-- уменьшение отступа через `dedent`;
-- значения из `Bindings` через placeholder-ы вида `<Expression>`;
-- списки через `join(<Item>, separator)`;
-- условные фрагменты через `ifpresent(Name, ...)`.
+- string literals: `"class"`, `"return"`, `";"`;
+- spaces through `sp`;
+- line breaks through `nl`;
+- indentation increase through `indent`;
+- indentation decrease through `dedent`;
+- values from `Bindings` through placeholders like `<Expression>`;
+- lists through `join(<Item>, separator)`;
+- conditional fragments through `ifpresent(Name, ...)`.
 
-Для вложенных AST-узлов renderer обращается обратно к `FormatterEngine`, поэтому форматирование работает рекурсивно.
+For nested AST nodes, the renderer calls back into `FormatterEngine`, so formatting works recursively.
 
-## Сохранение неподдержанных фрагментов
+## Preserving unsupported fragments
 
-Если для конкретного AST-узла нет отдельного DSL-правила, formatter не выбрасывает этот фрагмент и не пытается угадать его структуру. Вместо этого он берёт исходные токены узла из JavaParser AST и передаёт их в итоговый результат.
+If a specific AST node has no separate DSL rule, the formatter does not discard this fragment and does not try to guess its structure. Instead, it takes the original tokens of the node from the JavaParser AST and passes them to the final result.
 
-Это важно для практического форматирования: можно постепенно расширять набор правил, а уже существующие неподдержанные конструкции Java сохраняются в исходном виде.
+This is important for practical formatting: the rule set can be expanded gradually, while already existing unsupported Java constructs are preserved unchanged.
 
-## Проверка безопасности
+## Safety check
 
-Перед записью результата formatter выполняет защитную проверку:
+Before writing the result, the formatter performs a protective check:
 
-1. форматированный текст заново парсится JavaParser-ом;
-2. если результат не парсится, файл пропускается;
-3. если результат парсится, нормализованное AST сравнивается с исходным AST;
-4. если AST отличается, файл пропускается;
-5. если AST совпадает, formatter записывает результат в режиме `--write`.
+1. the formatted text is parsed again by JavaParser;
+2. if the result cannot be parsed, the file is skipped;
+3. if the result can be parsed, the normalized AST is compared with the original AST;
+4. if the AST differs, the file is skipped;
+5. if the AST matches, the formatter writes the result in `--write` mode.
 
-Такой механизм защищает от ситуации, когда ошибка в правиле изменила смысл Java-кода или он стал не валидным. Поэтому Formatter меняет только оформление и никогда не изменит структуру программы.
+This mechanism protects against a situation where a mistake in a rule changes the meaning of Java code or makes it invalid. Therefore, Formatter changes only the formatting and never changes the structure of the program.
 
-## Связь с пользовательской документацией
+## Relation to user documentation
 
-- Быстрый запуск и CLI описаны в [README.md](README.md).
-- Правила написания DSL-правил вынесены в [HowToWriteRules.md](HowToWriteRules.md).
+- Quick start and CLI usage are described in [README.md](README.md).
+- DSL rule writing guidelines are provided in [HowToWriteRules.md](HowToWriteRules.md).
