@@ -3,7 +3,7 @@
 
 Formatter построен как пайплайн: исходный **Java-код и DSL-правила разбираются** в структурные модели, затем ядро форматтера **сопоставляет JavaParser AST с правилами** и **собирает итоговый текст**.
 
-![Архитектура Formatter](docs/images/formatter-architecture.png)
+![Архитектура Formatter](../../images/formatter-architecture.png)
 
 ## Общая идея
 
@@ -119,5 +119,5 @@ ANTLR строит parse tree для такого правила, а `RuleAstBui
 
 ## Связь с пользовательской документацией
 
-- Быстрый запуск и CLI описаны в [README.md](README.md).
-- Правила написания DSL-правил вынесены в [HowToWriteRules.md](HowToWriteRules.md).
+- Быстрый запуск и CLI описаны в [README_ru.md](README_ru.md).
+- Правила написания DSL-правил вынесены в [HowToWriteRules_ru.md](HowToWriteRules_ru.md).

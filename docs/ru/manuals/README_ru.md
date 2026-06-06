@@ -77,7 +77,7 @@ Formatter - Java-форматтер, в котором стиль описыва
 
 Основная реализация завершена: в проекте есть рабочий CLI, парсер DSL-правил, внутренняя модель правил, сопоставление с AST, рендеринг результата, fallback для неподдержанных фрагментов и проверка безопасности перед записью.
 
-Базовый набор правил находится в `DefaultFormatterFactory` (его можно настраивать под себя по гайду из [HowToWriteRules.md](HowToWriteRules.md)). Он покрывает основной пайплайн форматирования Java-файлов: `package`, `import`, `class`, `interface`, методы, блоки, `if/else`, `for`, `return` и expression statements.
+Базовый набор правил находится в `DefaultFormatterFactory` (его можно настраивать под себя по гайду из [HowToWriteRules.md](../../../HowToWriteRules.md)). Он покрывает основной пайплайн форматирования Java-файлов: `package`, `import`, `class`, `interface`, методы, блоки, `if/else`, `for`, `return` и expression statements.
 
 ## Требования
 
@@ -180,10 +180,10 @@ cd Formatter
 8. Если для фрагмента нет отдельного правила, в результат передаются его исходные токены.
 9. Итоговый текст снова парсится, после чего нормализованное AST сравнивается с исходным.
 
-Подробное описание архитектуры вынесено в отдельный файл: [Contributing.md](Contributing.md).
+Подробное описание архитектуры вынесено в отдельный файл: [Contributing.md](../../../Contributing.md).
 
 ## Как писать правила
-**Подробный алгоритм написания правил, подбора имён JavaParser-нод и поиска их properties вынесен в отдельный гайд: [HowToWriteRules.md](HowToWriteRules.md).**
+**Подробный алгоритм написания правил, подбора имён JavaParser-нод и поиска их properties вынесен в отдельный гайд: [HowToWriteRules.md](../../../HowToWriteRules.md).**
 
 ***Кратко ниже:***
 
@@ -252,5 +252,5 @@ src/test/java                                   # тесты
 ANTLR-классы генерируются Gradle-задачей автоматически во время сборки.
 
 ## Связь с пользовательской документацией
-- Гайд по написанию DSL-правил находится в [HowToWriteRules.md](HowToWriteRules.md).
-- Подробное описание архитектуры вынесено находится в [Contributing.md](Contributing.md).
+- Гайд по написанию DSL-правил находится в [HowToWriteRules_ru.md](HowToWriteRules_ru.md).
+- Подробное описание архитектуры вынесено находится в [Contributing_ru.md](Contributing_ru.md).
